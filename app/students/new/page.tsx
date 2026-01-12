@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { supabase } from '../../lib/supabase';
 
 export default function NewStudentPage() {
     const router = useRouter();
@@ -22,18 +23,33 @@ export default function NewStudentPage() {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
 
-        // Simulate API call
-        console.log('Creating student:', formData);
+        const { error } = await supabase
+            .from('students')
+            .insert([
+                {
+                    first_name: formData.firstName,
+                    last_name: formData.lastName,
+                    group_name: formData.group,
+                    dob: formData.dob || null,
+                    parent_name: formData.parentName,
+                    phone: formData.phone,
+                    // Note: email and address are not in the current DB schema yet, 
+                    // so we only save what we created in step 1.
+                    status: 'active'
+                }
+            ]);
 
-        setTimeout(() => {
+        if (error) {
+            alert('Fout bij opslaan: ' + error.message);
             setLoading(false);
+        } else {
             // Redirect to students list
             router.push('/students');
-        }, 1500);
+        }
     };
 
     return (

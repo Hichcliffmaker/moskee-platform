@@ -1,38 +1,79 @@
 'use client';
 
-import { useState } from 'react';
-import { MOCK_STUDENTS } from '../../lib/data';
+import { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
+import { Student } from '../../lib/data';
 import Link from 'next/link';
 
 const SUBJECTS = ["Koran", "Fiqh", "Aqidah", "Seerah", "Arabisch", "Gedrag"];
 const TYPES = ["Huiswerk", "Overhoring", "Toets", "Tentamen", "Praktijk"];
 
 export default function EnterGradePage() {
+    const [students, setStudents] = useState<Student[]>([]);
+
+    // Form State
     const [selectedStudentId, setSelectedStudentId] = useState('');
     const [selectedSubject, setSelectedSubject] = useState(SUBJECTS[0]);
-    const [selectedType, setSelectedType] = useState(TYPES[0]);
+    const [selectedType, setSelectedType] = useState(TYPES[0]); // Not used in DB yet schema but good to have in UI
     const [grade, setGrade] = useState('');
     const [description, setDescription] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [submitted, setSubmitted] = useState(false);
+    const [loading, setLoading] = useState(true);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    // Fetch students for dropdown
+    useEffect(() => {
+        async function fetchStudents() {
+            const { data } = await supabase
+                .from('students')
+                .select('*')
+                .order('first_name', { ascending: true });
+
+            if (data) {
+                const mapped: Student[] = data.map(s => ({
+                    id: s.id,
+                    firstName: s.first_name,
+                    lastName: s.last_name,
+                    group: s.group_name || '',
+                    dob: s.dob,
+                    parentName: s.parent_name,
+                    phone: s.phone,
+                    status: s.status,
+                    badges: []
+                }));
+                setStudents(mapped);
+            }
+            setLoading(false);
+        }
+        fetchStudents();
+    }, []);
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log({
-            studentId: selectedStudentId,
-            subject: selectedSubject,
-            type: selectedType,
-            grade,
-            description,
-            date
-        });
-        setSubmitted(true);
-        // Reset form after delay
-        setTimeout(() => {
-            setSubmitted(false);
-            setGrade('');
-            setDescription('');
-        }, 3000);
+
+        const { error } = await supabase
+            .from('grades')
+            .insert([
+                {
+                    student_id: selectedStudentId,
+                    subject: selectedSubject,
+                    topic: description, // Mapping topic to description input
+                    grade: parseFloat(grade),
+                    date: date
+                }
+            ]);
+
+        if (error) {
+            alert('Fout bij opslaan: ' + error.message);
+        } else {
+            setSubmitted(true);
+            // Reset form after delay
+            setTimeout(() => {
+                setSubmitted(false);
+                setGrade('');
+                setDescription('');
+            }, 3000);
+        }
     };
 
     return (
@@ -65,7 +106,7 @@ export default function EnterGradePage() {
                                 }}
                             >
                                 <option value="" disabled>Selecteer een student...</option>
-                                {MOCK_STUDENTS.map(s => (
+                                {students.map(s => (
                                     <option key={s.id} value={s.id}>{s.firstName} {s.lastName} ({s.group})</option>
                                 ))}
                             </select>

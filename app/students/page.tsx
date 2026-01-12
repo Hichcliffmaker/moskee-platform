@@ -1,13 +1,44 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MOCK_STUDENTS, Student } from '../lib/data';
+import { supabase } from '../lib/supabase';
 import Link from 'next/link';
 
 export default function StudentsPage() {
     const [searchTerm, setSearchTerm] = useState('');
+    const [students, setStudents] = useState<Student[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const filteredStudents = MOCK_STUDENTS.filter(student =>
+    useEffect(() => {
+        async function fetchStudents() {
+            const { data, error } = await supabase
+                .from('students')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (data) {
+                // Map DB columns (snake_case) to our App type (camelCase)
+                const mappedStudents: Student[] = data.map(s => ({
+                    id: s.id,
+                    firstName: s.first_name,
+                    lastName: s.last_name,
+                    group: s.group_name || 'Geen Groep',
+                    dob: s.dob,
+                    parentName: s.parent_name,
+                    phone: s.phone,
+                    status: s.status as 'active' | 'inactive',
+                    badges: [] // Badges not yet in DB
+                }));
+                setStudents(mappedStudents);
+            }
+            setLoading(false);
+        }
+
+        fetchStudents();
+    }, []);
+
+    const filteredStudents = students.filter(student =>
         student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.group.toLowerCase().includes(searchTerm.toLowerCase())
@@ -71,7 +102,9 @@ export default function StudentsPage() {
 
                 {/* Students List */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {filteredStudents.length === 0 ? (
+                    {loading ? (
+                        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>Laden...</div>
+                    ) : filteredStudents.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>
                             Geen studenten gevonden die aan de zoekopdracht voldoen.
                         </div>

@@ -1,24 +1,14 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, use, useEffect } from 'react';
 import Link from 'next/link';
-import { MOCK_STUDENTS, Badge, Student } from '../../lib/data';
+import { Badge, Student } from '../../lib/data';
+import { supabase } from '../../lib/supabase';
 
-// Mock additional data which isn't in the global store yet
-const MOCK_ALL_GRADES = [
-    { subject: 'Koran', topic: 'Surah Yasin (Volledig)', date: '10 Jan 2024', grade: 9.5, passed: true },
-    { subject: 'Fiqh', topic: 'Wudu (Praktijk)', date: '05 Jan 2024', grade: 8.0, passed: true },
-    { subject: 'Gedrag', topic: 'Winter Periode', date: '20 Dec 2023', grade: 'Goed', passed: true },
-    { subject: 'Arabisch', topic: 'Lezen Hoofdstuk 4', date: '15 Dec 2023', grade: 7.2, passed: true },
-    { subject: 'Tajweed', topic: 'Noon Saakinah', date: '12 Dec 2023', grade: 6.5, passed: true },
-    { subject: 'Koran', topic: 'Surah Al-Mulk', date: '01 Dec 2023', grade: 8.8, passed: true },
-];
-
-const MOCK_ABSENCES = [
-    { date: '14 Jan 2024', type: 'Ziek', status: 'Gemeld' },
-    { date: '02 Dec 2023', type: 'Te Laat', status: 'Ongeoorloofd' },
-    { date: '15 Nov 2023', type: 'Ziek', status: 'Gemeld' },
-];
+// Helper to get initials
+const getInitials = (firstName: string, lastName: string) => {
+    return (firstName?.[0] || '') + (lastName?.[0] || '');
+};
 
 const PRESET_BADGES = [
     { name: 'Hifz Held', icon: '👑', color: '#ffd700', description: 'Uitmuntende prestatie in memorisatie' },
@@ -30,22 +20,72 @@ const PRESET_BADGES = [
 
 export default function StudentProfilePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
-    // Find initial student
-    const initialStudent = MOCK_STUDENTS.find((s) => s.id === id);
 
-    // State for local updates (like adding a badge)
-    const [student, setStudent] = useState<Student | undefined>(initialStudent);
+    // Core Data State
+    const [student, setStudent] = useState<Student | undefined>(undefined);
+    const [grades, setGrades] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    // Tab State
+    // UI/Flow State
     const [activeTab, setActiveTab] = useState<'overview' | 'grades' | 'absences' | 'notes'>('overview');
-
-    // Award Modal State
     const [showAwardModal, setShowAwardModal] = useState(false);
+
+    // Notes State
     const [noteText, setNoteText] = useState('');
     const [notes, setNotes] = useState<{ date: string, text: string }[]>([]);
 
     // Quick Actions State
     const [isSickReported, setIsSickReported] = useState(false);
+
+    // Fetch Student Data
+    useEffect(() => {
+        async function fetchData() {
+            setLoading(true);
+
+            // 1. Get Student
+            const { data: studentData, error: studentError } = await supabase
+                .from('students')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (studentData) {
+                setStudent({
+                    id: studentData.id,
+                    firstName: studentData.first_name,
+                    lastName: studentData.last_name,
+                    group: studentData.group_name || 'Geen Groep',
+                    dob: studentData.dob,
+                    parentName: studentData.parent_name,
+                    phone: studentData.phone,
+                    status: (studentData.status as 'active' | 'inactive') || 'active',
+                    badges: []
+                });
+
+                // 2. Get Grades (Only if student found)
+                const { data: gradesData } = await supabase
+                    .from('grades')
+                    .select('*')
+                    .eq('student_id', id)
+                    .order('date', { ascending: false });
+
+                if (gradesData) {
+                    setGrades(gradesData.map(g => ({
+                        subject: g.subject,
+                        topic: g.topic || '-',
+                        date: new Date(g.date).toLocaleDateString('nl-NL'),
+                        grade: g.grade,
+                        passed: g.grade >= 5.5
+                    })));
+                }
+
+            } else {
+                console.error('Student not found:', studentError);
+            }
+            setLoading(false);
+        }
+        if (id) fetchData();
+    }, [id]);
 
     const handleReportSick = () => {
         if (confirm(`Wilt u ${student?.firstName} ziekmelden voor vandaag?`)) {
@@ -59,6 +99,15 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
             window.location.href = `tel:${student.phone}`;
         }
     };
+
+    // Fallback for absences (not in DB yet)
+    const MOCK_ABSENCES = [
+        { date: '14 Jan 2024', type: 'Ziek', status: 'Gemeld' },
+    ];
+
+    if (loading) {
+        return <div style={{ padding: '40px', textAlign: 'center', color: 'white' }}>Laden...</div>;
+    }
 
     if (!student) {
         return (
@@ -258,7 +307,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {MOCK_ALL_GRADES.slice(0, 3).map((g, i) => (
+                                            {grades.slice(0, 3).map((g, i) => (
                                                 <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                                                     <td style={{ padding: '16px 0', fontWeight: 'bold' }}>{g.subject}</td>
                                                     <td style={{ padding: '16px 0' }}>{g.topic}</td>
@@ -326,7 +375,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {MOCK_ALL_GRADES.map((g, i) => (
+                                    {grades.map((g, i) => (
                                         <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                                             <td style={{ padding: '16px 0', fontWeight: 'bold' }}>{g.subject}</td>
                                             <td style={{ padding: '16px 0' }}>{g.topic}</td>
