@@ -21,6 +21,8 @@ export const viewport = {
   themeColor: '#0a1f18',
 }
 
+import HomeButton from "./components/HomeButton";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -30,6 +32,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={outfit.variable}>
         {children}
+        <HomeButton />
       </body>
     </html>
   );
