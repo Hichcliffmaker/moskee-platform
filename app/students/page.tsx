@@ -57,7 +57,7 @@ export default function StudentsPage() {
                     gap: '20px'
                 }}>
                     <div>
-                        <h1 className="heading-lg">Studenten</h1>
+                        <h1 className="heading-lg">Studenten (Live Database)</h1>
                         <p style={{ color: 'var(--color-text-muted)' }}>
                             Beheer dossiers, inschrijvingen en voortgang.
                         </p>
