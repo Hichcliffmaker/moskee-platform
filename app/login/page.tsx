@@ -3,21 +3,31 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { supabase } from '../lib/supabase';
 
 export default function LoginPage() {
     const router = useRouter();
-    const [username, setUsername] = useState('admin');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setLoading(true);
 
-        if (username === 'admin' && password === 'admin123') {
-            router.push('/');
+        const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
+
+        if (error) {
+            setError(error.message);
+            setLoading(false);
         } else {
-            setError('Ongeldige gebruikersnaam of wachtwoord');
+            // Login successful!
+            router.push('/');
         }
     };
 
@@ -33,7 +43,7 @@ export default function LoginPage() {
                 <div style={{ textAlign: 'center', marginBottom: '40px' }}>
                     <div style={{ fontSize: '3rem', marginBottom: '10px' }}>🕌</div>
                     <h1 className="heading-lg" style={{ fontSize: '2rem' }}>Al-Madrasa</h1>
-                    <p style={{ color: 'var(--color-text-muted)' }}>Log in op het platform</p>
+                    <p style={{ color: 'var(--color-text-muted)' }}>Veilig inloggen</p>
                 </div>
 
                 <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -43,11 +53,13 @@ export default function LoginPage() {
                         </div>
                     )}
                     <div>
-                        <label style={{ display: 'block', marginBottom: '8px', color: 'var(--color-text-muted)' }}>Gebruikersnaam</label>
+                        <label style={{ display: 'block', marginBottom: '8px', color: 'var(--color-text-muted)' }}>Emailadres</label>
                         <input
-                            type="text"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
+                            type="email"
+                            required
+                            placeholder="naam@voorbeeld.nl"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                             style={{
                                 width: '100%',
                                 padding: '12px',
@@ -76,8 +88,13 @@ export default function LoginPage() {
                         />
                     </div>
 
-                    <button type="submit" className="btn btn-primary" style={{ marginTop: '10px', width: '100%', textAlign: 'center' }}>
-                        Inloggen
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="btn btn-primary"
+                        style={{ marginTop: '10px', width: '100%', textAlign: 'center', opacity: loading ? 0.7 : 1 }}
+                    >
+                        {loading ? 'Bezig met inloggen...' : 'Inloggen'}
                     </button>
 
                     <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '0.9rem' }}>
