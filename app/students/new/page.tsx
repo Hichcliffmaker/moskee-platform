@@ -37,8 +37,8 @@ export default function NewStudentPage() {
                     dob: formData.dob || null,
                     parent_name: formData.parentName,
                     phone: formData.phone,
-                    // Note: email and address are not in the current DB schema yet, 
-                    // so we only save what we created in step 1.
+                    email: formData.email,     // Nu toegevoegd!
+                    address: formData.address, // Nu toegevoegd!
                     status: 'active'
                 }
             ]);

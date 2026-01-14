@@ -24,6 +24,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
     // Core Data State
     const [student, setStudent] = useState<Student | undefined>(undefined);
     const [grades, setGrades] = useState<any[]>([]);
+    const [absences, setAbsences] = useState<any[]>([]); // New State
     const [loading, setLoading] = useState(true);
 
     // UI/Flow State
@@ -37,7 +38,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
     // Quick Actions State
     const [isSickReported, setIsSickReported] = useState(false);
 
-    // Fetch Student Data
+    // Fetch Student Data & Related Info
     useEffect(() => {
         async function fetchData() {
             setLoading(true);
@@ -50,6 +51,14 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                 .single();
 
             if (studentData) {
+                // Fetch related data in parallel
+                const [gradesRes, absencesRes, notesRes, badgesRes] = await Promise.all([
+                    supabase.from('grades').select('*').eq('student_id', id).order('date', { ascending: false }),
+                    supabase.from('absences').select('*').eq('student_id', id).order('date', { ascending: false }),
+                    supabase.from('notes').select('*').eq('student_id', id).order('created_at', { ascending: false }),
+                    supabase.from('badges').select('*').eq('student_id', id).order('date', { ascending: false })
+                ]);
+
                 setStudent({
                     id: studentData.id,
                     firstName: studentData.first_name,
@@ -58,24 +67,36 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                     dob: studentData.dob,
                     parentName: studentData.parent_name,
                     phone: studentData.phone,
+                    email: studentData.email,     // NEW
+                    address: studentData.address, // NEW
                     status: (studentData.status as 'active' | 'inactive') || 'active',
-                    badges: []
+                    badges: badgesRes.data ? badgesRes.data.map(b => ({
+                        id: b.id, name: b.name, icon: b.icon, color: b.color, description: b.description, date: b.date
+                    })) : []
                 });
 
-                // 2. Get Grades (Only if student found)
-                const { data: gradesData } = await supabase
-                    .from('grades')
-                    .select('*')
-                    .eq('student_id', id)
-                    .order('date', { ascending: false });
-
-                if (gradesData) {
-                    setGrades(gradesData.map(g => ({
+                if (gradesRes.data) {
+                    setGrades(gradesRes.data.map(g => ({
                         subject: g.subject,
                         topic: g.topic || '-',
                         date: new Date(g.date).toLocaleDateString('nl-NL'),
                         grade: g.grade,
                         passed: g.grade >= 5.5
+                    })));
+                }
+
+                if (absencesRes.data) {
+                    setAbsences(absencesRes.data.map(a => ({
+                        date: new Date(a.date).toLocaleDateString('nl-NL'),
+                        type: a.reason,
+                        status: a.status
+                    })));
+                }
+
+                if (notesRes.data) {
+                    setNotes(notesRes.data.map(n => ({
+                        date: new Date(n.created_at).toLocaleDateString('nl-NL'),
+                        text: n.content
                     })));
                 }
 
@@ -87,10 +108,23 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
         if (id) fetchData();
     }, [id]);
 
-    const handleReportSick = () => {
-        if (confirm(`Wilt u ${student?.firstName} ziekmelden voor vandaag?`)) {
-            setIsSickReported(true);
-            setTimeout(() => alert('✅ Ziekmelding verwerkt.'), 100);
+    const handleReportSick = async () => {
+        if (!student) return;
+        if (confirm(`Wilt u ${student.firstName} ziekmelden voor vandaag?`)) {
+            const today = new Date().toISOString().split('T')[0];
+            const { error } = await supabase.from('absences').insert([{
+                student_id: student.id,
+                date: today,
+                reason: 'Ziek',
+                status: 'Gemeld'
+            }]);
+
+            if (error) {
+                alert('Fout: ' + error.message);
+            } else {
+                setIsSickReported(true);
+                alert('✅ Ziekmelding verwerkt in database.');
+            }
         }
     };
 
@@ -100,13 +134,10 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
         }
     };
 
-    // Fallback for absences (not in DB yet)
-    const MOCK_ABSENCES = [
-        { date: '14 Jan 2024', type: 'Ziek', status: 'Gemeld' },
-    ];
+    // We remove MOCK_ABSENCES here as we will fetch them later (or I need to add state for it)
 
     if (loading) {
-        return <div style={{ padding: '40px', textAlign: 'center', color: 'white' }}>Laden...</div>;
+        return <div style={{ padding: '40px', textAlign: 'center', color: 'white' }}>Laden uit database...</div>;
     }
 
     if (!student) {
@@ -120,28 +151,51 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
         );
     }
 
-    const handleAddBadge = (badgeTemplate: typeof PRESET_BADGES[0]) => {
-        const newBadge: Badge = {
-            id: Math.random().toString(36).substr(2, 9),
+    const handleAddBadge = async (badgeTemplate: typeof PRESET_BADGES[0]) => {
+        if (!student) return;
+
+        const { data, error } = await supabase.from('badges').insert([{
+            student_id: student.id,
             name: badgeTemplate.name,
             icon: badgeTemplate.icon,
             color: badgeTemplate.color,
             description: badgeTemplate.description,
-            date: new Date().toLocaleDateString('nl-NL')
-        };
+            date: new Date().toISOString().split('T')[0]
+        }]).select();
 
-        // Update local state (in a real app, this would be an API call)
-        const updatedStudent = { ...student, badges: [...(student.badges || []), newBadge] };
-        setStudent(updatedStudent);
-        setShowAwardModal(false);
+        if (error) {
+            alert('Fout bij toevoegen badge: ' + error.message);
+        } else if (data) {
+            // Update local UI
+            const newBadge = {
+                id: data[0].id,
+                name: data[0].name,
+                icon: data[0].icon,
+                color: data[0].color,
+                description: data[0].description,
+                date: data[0].date
+            };
+            setStudent({ ...student, badges: [newBadge, ...(student.badges || [])] });
+            setShowAwardModal(false);
+        }
     };
 
-    const handleAddNote = (e: React.FormEvent) => {
+    const handleAddNote = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!noteText.trim()) return;
+        if (!noteText.trim() || !student) return;
 
-        setNotes([{ date: new Date().toLocaleDateString('nl-NL'), text: noteText }, ...notes]);
-        setNoteText('');
+        const { error } = await supabase.from('notes').insert([{
+            student_id: student.id,
+            content: noteText,
+            date: new Date().toISOString().split('T')[0]
+        }]);
+
+        if (error) {
+            alert('Fout bij opslaan notitie: ' + error.message);
+        } else {
+            setNotes([{ date: new Date().toLocaleDateString('nl-NL'), text: noteText }, ...notes]);
+            setNoteText('');
+        }
     };
 
     return (
@@ -401,21 +455,28 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {MOCK_ABSENCES.map((a, i) => (
-                                        <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                            <td style={{ padding: '16px 0' }}>{a.date}</td>
-                                            <td style={{ padding: '16px 0', fontWeight: 'bold' }}>{a.type}</td>
-                                            <td style={{ padding: '16px 0' }}>
-                                                <span style={{
-                                                    padding: '4px 10px', borderRadius: '12px', fontSize: '0.85rem',
-                                                    background: a.status === 'Gemeld' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(229, 115, 115, 0.2)',
-                                                    color: a.status === 'Gemeld' ? '#81c784' : '#e57373'
-                                                }}>
-                                                    {a.status}
-                                                </span>
+                                    {absences.length > 0 ? (
+                                        absences.map((a, i) => (
+                                            <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <td style={{ padding: '12px 0', color: 'white' }}>{a.date}</td>
+                                                <td style={{ padding: '12px 0', color: 'var(--color-text-muted)' }}>{a.type}</td>
+                                                <td style={{ padding: '12px 0', textAlign: 'right' }}>
+                                                    <span style={{
+                                                        padding: '4px 12px', borderRadius: '12px', fontSize: '0.8rem',
+                                                        background: 'rgba(255, 152, 0, 0.2)', color: '#ffcc80', border: '1px solid rgba(255, 152, 0, 0.3)'
+                                                    }}>
+                                                        {a.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={3} style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                                                Geen absenties geregistreerd.
                                             </td>
                                         </tr>
-                                    ))}
+                                    )}
                                 </tbody>
                             </table>
                         </div>

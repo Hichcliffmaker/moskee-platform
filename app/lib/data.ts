@@ -15,6 +15,8 @@ export type Student = {
     dob: string;
     parentName: string;
     phone: string;
+    email?: string;
+    address?: string;
     status: 'active' | 'inactive';
     badges: Badge[];
 };
