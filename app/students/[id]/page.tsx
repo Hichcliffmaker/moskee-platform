@@ -287,6 +287,24 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                                     <div style={{ fontWeight: '600' }}>{student.dob}</div>
                                 </div>
                             </div>
+
+                            {/* Extra Contact Info Row */}
+                            {(student.email || student.address) && (
+                                <div style={{ marginTop: '16px', display: 'flex', gap: '40px' }}>
+                                    {student.email && (
+                                        <div>
+                                            <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>EMAILADRES</div>
+                                            <div style={{ fontWeight: '600' }}>{student.email}</div>
+                                        </div>
+                                    )}
+                                    {student.address && (
+                                        <div>
+                                            <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>ADRES</div>
+                                            <div style={{ fontWeight: '600' }}>{student.address}</div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
