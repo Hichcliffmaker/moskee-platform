@@ -16,12 +16,20 @@ export default function Home() {
     const savedName = localStorage.getItem('mosqueName');
     if (savedName) setMosqueName(savedName + ' Dashboard');
 
-    // Fetch Stats
-    async function fetchStats() {
+    // Fetch Stats & Name from DB
+    async function fetchData() {
+      // 1. Stats
       const countRes = await supabase.from('students').select('*', { count: 'exact', head: true }).eq('status', 'active');
       setStats(prev => ({ ...prev, totalStudents: countRes.count || 0 }));
+
+      // 2. Name
+      const { data: naming } = await supabase.from('settings').select('*').eq('key', 'mosque_name').single();
+      if (naming && naming.value) {
+        setMosqueName(naming.value + ' Dashboard');
+        localStorage.setItem('mosqueName', naming.value);
+      }
     }
-    fetchStats();
+    fetchData();
 
     // Listener for name updates
     const handleStorageChange = () => {
