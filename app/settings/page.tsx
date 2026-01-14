@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { supabase } from '../lib/supabase';
 
 export default function SettingsPage() {
     const [activeTab, setActiveTab] = useState('general');
@@ -23,30 +24,46 @@ export default function SettingsPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
 
-    // Initial load from local storage
-    useState(() => {
-        if (typeof window !== 'undefined') {
-            const savedName = localStorage.getItem('mosqueName');
-            const savedCity = localStorage.getItem('mosqueCity');
-            if (savedName) setMosqueName(savedName);
-            if (savedCity) setCity(savedCity);
+    // Initial load from Supabase
+    useEffect(() => {
+        async function loadSettings() {
+            const { data } = await supabase.from('settings').select('*');
+            if (data) {
+                const nameSetting = data.find(s => s.key === 'mosque_name');
+                const citySetting = data.find(s => s.key === 'mosque_city');
+
+                if (nameSetting) setMosqueName(nameSetting.value);
+                if (citySetting) setCity(citySetting.value);
+            }
         }
-    });
+        loadSettings();
+    }, []);
 
-    const handleSaveSettings = () => {
+    const handleSaveSettings = async () => {
         setIsSaving(true);
-        // Persist to LocalStorage
-        localStorage.setItem('mosqueName', mosqueName);
-        localStorage.setItem('mosqueCity', city);
 
-        // Dispatch a custom event so other components update immediately if they are listening
-        window.dispatchEvent(new Event('storage'));
+        // Persist to Supabase
+        const updates = [
+            { key: 'mosque_name', value: mosqueName },
+            { key: 'mosque_city', value: city }
+        ];
+
+        const { error } = await supabase.from('settings').upsert(updates, { onConflict: 'key' });
+
+        if (error) {
+            alert('Fout bij opslaan: ' + error.message);
+            setIsSaving(false);
+            return;
+        }
+
+        // Also update local storage for immediate fallback/speed if needed, but DB is truth
+        localStorage.setItem('mosqueName', mosqueName);
 
         setTimeout(() => {
             setIsSaving(false);
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 3000);
-        }, 1000);
+        }, 500);
     };
 
     const handleAddAdmin = () => {
@@ -64,6 +81,8 @@ export default function SettingsPage() {
     const handleDeleteAdmin = (id: number) => {
         setAdmins(admins.filter((a) => a.id !== id));
     };
+
+
 
     return (
         <main style={{ padding: '40px' }}>

@@ -1,22 +1,31 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { supabase } from './lib/supabase';
 
 export default function Home() {
   const [mosqueName, setMosqueName] = useState('Al-Madrasa Dashboard');
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    presence: '100%' // Placeholder until we have daily attendance logic
+  });
 
   useEffect(() => {
-    // Initial load
+    // Initial load localstorage settings
     const savedName = localStorage.getItem('mosqueName');
     if (savedName) setMosqueName(savedName + ' Dashboard');
 
-    // Listener for updates
+    // Fetch Stats
+    async function fetchStats() {
+      const countRes = await supabase.from('students').select('*', { count: 'exact', head: true }).eq('status', 'active');
+      setStats(prev => ({ ...prev, totalStudents: countRes.count || 0 }));
+    }
+    fetchStats();
+
+    // Listener for name updates
     const handleStorageChange = () => {
       const newName = localStorage.getItem('mosqueName');
       if (newName) setMosqueName(newName + ' Dashboard');
     };
-
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
@@ -107,11 +116,11 @@ export default function Home() {
             <h2 className="heading-md">School Overzicht</h2>
             <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ textAlign: 'center', padding: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--radius-sm)' }}>
-                <div style={{ fontSize: '3rem', fontWeight: 'bold', color: 'var(--color-text-main)' }}>504</div>
+                <div style={{ fontSize: '3rem', fontWeight: 'bold', color: 'var(--color-text-main)' }}>{stats.totalStudents}</div>
                 <div style={{ color: 'var(--color-text-muted)' }}>Actieve Studenten</div>
               </div>
               <div style={{ textAlign: 'center', padding: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--radius-sm)' }}>
-                <div style={{ fontSize: '3rem', fontWeight: 'bold', color: 'var(--color-gold)' }}>98%</div>
+                <div style={{ fontSize: '3rem', fontWeight: 'bold', color: 'var(--color-gold)' }}>{stats.presence}</div>
                 <div style={{ color: 'var(--color-text-muted)' }}>Aanwezigheid Vandaag</div>
               </div>
             </div>
