@@ -1,14 +1,46 @@
 'use client';
 
-import { use } from 'react';
+import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
-import { MOCK_STUDENTS } from '../../../lib/data';
+import { supabase } from '../../../lib/supabase';
+import { Student } from '../../../lib/data';
 
 export default function CertificatePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
-    const student = MOCK_STUDENTS.find(s => s.id === id);
+    const [student, setStudent] = useState<Student | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    if (!student) return <div>Student niet gevonden</div>;
+    useEffect(() => {
+        async function fetchStudent() {
+            setLoading(true);
+            const { data, error } = await supabase
+                .from('students')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (data) {
+                setStudent({
+                    id: data.id,
+                    firstName: data.first_name,
+                    lastName: data.last_name,
+                    group: data.group_name || '',
+                    dob: data.dob,
+                    parentName: data.parent_name,
+                    phone: data.phone,
+                    status: data.status,
+                    badges: []
+                });
+            } else {
+                console.error('Error fetching student:', error);
+            }
+            setLoading(false);
+        }
+        fetchStudent();
+    }, [id]);
+
+    if (loading) return <div style={{ padding: '40px', color: 'white', textAlign: 'center' }}>Laden...</div>;
+    if (!student) return <div style={{ padding: '40px', color: 'white', textAlign: 'center' }}>Student niet gevonden</div>;
 
     const handlePrint = () => {
         window.print();

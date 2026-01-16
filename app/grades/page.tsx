@@ -1,7 +1,39 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { MOCK_STUDENTS } from '../lib/data';
+import { supabase } from '../lib/supabase';
 
 export default function GradesPage() {
+    const [grades, setGrades] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function fetchGrades() {
+            setLoading(true);
+            // Fetch grades and join with students table to get names
+            const { data, error } = await supabase
+                .from('grades')
+                .select(`
+                    *,
+                    students (
+                        first_name,
+                        last_name,
+                        group_name
+                    )
+                `)
+                .order('date', { ascending: false });
+
+            if (data) {
+                setGrades(data);
+            } else if (error) {
+                console.error('Error fetching grades:', error);
+            }
+            setLoading(false);
+        }
+        fetchGrades();
+    }, []);
+
     return (
         <main style={{ padding: '40px' }}>
             <div className="container">
@@ -15,7 +47,7 @@ export default function GradesPage() {
                     </Link>
                 </header>
 
-                {/* Filters (Mock) */}
+                {/* Filters (Mock - functionaliteit volgt) */}
                 <div className="card" style={{ marginBottom: '30px', display: 'flex', gap: '16px' }}>
                     <select style={{ padding: '10px', borderRadius: 'var(--radius-sm)', background: '#0a1f18', color: 'white', border: '1px solid var(--color-border)' }}>
                         <option>Alle Groepen</option>
@@ -29,51 +61,49 @@ export default function GradesPage() {
                     </select>
                 </div>
 
-                {/* Global Grades Table (Mock View) */}
+                {/* Global Grades Table */}
                 <div className="card">
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.95rem' }}>
-                        <thead>
-                            <tr style={{ borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-muted)', textAlign: 'left' }}>
-                                <th style={{ padding: '16px' }}>Student</th>
-                                <th style={{ padding: '16px' }}>Groep</th>
-                                <th style={{ padding: '16px' }}>Vak</th>
-                                <th style={{ padding: '16px' }}>Type</th>
-                                <th style={{ padding: '16px' }}>Omschrijving</th>
-                                <th style={{ padding: '16px' }}>Datum</th>
-                                <th style={{ padding: '16px', textAlign: 'right' }}>Cijfer</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {/* Mock Rows */}
-                            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                <td style={{ padding: '16px', fontWeight: '600' }}>Bilal El Amrani</td>
-                                <td style={{ padding: '16px', color: 'var(--color-text-muted)' }}>Gr. 4</td>
-                                <td style={{ padding: '16px' }}>Koran</td>
-                                <td style={{ padding: '16px' }}>Huiswerk</td>
-                                <td style={{ padding: '16px' }}>Surah Yasin (1-10)</td>
-                                <td style={{ padding: '16px', color: 'var(--color-text-muted)' }}>13 Jan</td>
-                                <td style={{ padding: '16px', textAlign: 'right', fontWeight: 'bold', color: '#81c784' }}>8.5</td>
-                            </tr>
-                            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                <td style={{ padding: '16px', fontWeight: '600' }}>Amina Bakker</td>
-                                <td style={{ padding: '16px', color: 'var(--color-text-muted)' }}>Gr. 3</td>
-                                <td style={{ padding: '16px' }}>Arabisch</td>
-                                <td style={{ padding: '16px' }}>Toets</td>
-                                <td style={{ padding: '16px' }}>Alfabet letters</td>
-                                <td style={{ padding: '16px', color: 'var(--color-text-muted)' }}>12 Jan</td>
-                                <td style={{ padding: '16px', textAlign: 'right', fontWeight: 'bold', color: '#e57373' }}>5.0</td>
-                            </tr>
-                            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                <td style={{ padding: '16px', fontWeight: '600' }}>Ibrahim Demir</td>
-                                <td style={{ padding: '16px', color: 'var(--color-text-muted)' }}>Gr. 5</td>
-                                <td style={{ padding: '16px' }}>Fiqh</td>
-                                <td style={{ padding: '16px' }}>Praktijk</td>
-                                <td style={{ padding: '16px' }}>Salah houding</td>
-                                <td style={{ padding: '16px', color: 'var(--color-text-muted)' }}>10 Jan</td>
-                                <td style={{ padding: '16px', textAlign: 'right', fontWeight: 'bold' }}>7.8</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    {loading ? (
+                        <div style={{ textAlign: 'center', padding: '20px', color: 'var(--color-text-muted)' }}>Laden...</div>
+                    ) : grades.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '20px', color: 'var(--color-text-muted)' }}>Nog geen cijfers ingevoerd.</div>
+                    ) : (
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.95rem' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-muted)', textAlign: 'left' }}>
+                                    <th style={{ padding: '16px' }}>Student</th>
+                                    <th style={{ padding: '16px' }}>Groep</th>
+                                    <th style={{ padding: '16px' }}>Vak</th>
+                                    <th style={{ padding: '16px' }}>Type</th>
+                                    <th style={{ padding: '16px' }}>Omschrijving</th>
+                                    <th style={{ padding: '16px' }}>Datum</th>
+                                    <th style={{ padding: '16px', textAlign: 'right' }}>Cijfer</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {grades.map((grade) => (
+                                    <tr key={grade.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <td style={{ padding: '16px', fontWeight: '600' }}>
+                                            {grade.students?.first_name} {grade.students?.last_name}
+                                        </td>
+                                        <td style={{ padding: '16px', color: 'var(--color-text-muted)' }}>
+                                            {grade.students?.group_name || '-'}
+                                        </td>
+                                        <td style={{ padding: '16px' }}>{grade.subject}</td>
+                                        <td style={{ padding: '16px' }}>Toets</td>
+                                        {/* Type is often not in explicit column yet, treating generic or could utilize 'topic' */}
+                                        <td style={{ padding: '16px' }}>{grade.topic || '-'}</td>
+                                        <td style={{ padding: '16px', color: 'var(--color-text-muted)' }}>
+                                            {new Date(grade.date).toLocaleDateString('nl-NL')}
+                                        </td>
+                                        <td style={{ padding: '16px', textAlign: 'right', fontWeight: 'bold', color: grade.grade >= 5.5 ? '#81c784' : '#e57373' }}>
+                                            {grade.grade}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
             </div>
         </main>

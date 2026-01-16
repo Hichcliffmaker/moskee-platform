@@ -1,16 +1,70 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, use, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { MOCK_STUDENTS, MOCK_GROUPS } from '../../../lib/data';
+import { supabase } from '../../../lib/supabase';
+import { Student, Group } from '../../../lib/data';
 
 export default function PlanningPage({ params }: { params: Promise<{ groupId: string }> }) {
     const { groupId } = use(params);
     const router = useRouter();
 
-    const group = MOCK_GROUPS.find(g => g.id === groupId);
-    const students = MOCK_STUDENTS.filter(s => s.group === group?.name || s.group.includes(group?.name.split('(')[0].trim() || 'XYZ'));
+    const [group, setGroup] = useState<Group | null>(null);
+    const [students, setStudents] = useState<Student[]>([]);
+    const [loadingData, setLoadingData] = useState(true);
+
+    useEffect(() => {
+        async function fetchData() {
+            setLoadingData(true);
+            // 1. Fetch Group
+            const { data: groupData, error: groupError } = await supabase
+                .from('groups')
+                .select('*')
+                .eq('id', groupId)
+                .single();
+
+            if (groupData) {
+                setGroup({
+                    id: groupData.id,
+                    name: groupData.name,
+                    teacher: groupData.teacher,
+                    room: groupData.room,
+                    schedule: groupData.schedule,
+                    studentsCount: 0 // Not needed for this view
+                });
+
+                // 2. Fetch Students for this group
+                // Note: Matching by group_name string as per current schema design
+                const { data: studentsData, error: studentsError } = await supabase
+                    .from('students')
+                    .select('*')
+                    .eq('group_name', groupData.name);
+
+                if (studentsData) {
+                    const mappedStudents: Student[] = studentsData.map(s => ({
+                        id: s.id,
+                        firstName: s.first_name,
+                        lastName: s.last_name,
+                        group: s.group_name,
+                        dob: s.dob,
+                        parentName: s.parent_name,
+                        phone: s.phone,
+                        status: s.status,
+                        badges: []
+                    }));
+                    setStudents(mappedStudents);
+                } else if (studentsError) {
+                    console.error('Error fetching students:', studentsError);
+                }
+            } else {
+                console.error('Error fetching group:', groupError);
+            }
+            setLoadingData(false);
+        }
+
+        if (groupId) fetchData();
+    }, [groupId]);
 
     const [formData, setFormData] = useState({
         studentId: '',

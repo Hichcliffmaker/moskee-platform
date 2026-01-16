@@ -1,19 +1,63 @@
 'use client';
 
-import { useState } from 'react';
-import { MOCK_STUDENTS } from '../lib/data';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-
-// Helper to get unique groups
-const GROUPS = Array.from(new Set(MOCK_STUDENTS.map(s => s.group))).sort();
+import { supabase } from '../lib/supabase';
+import { Student } from '../lib/data';
 
 export default function AttendancePage() {
-    const [selectedGroup, setSelectedGroup] = useState(GROUPS[0] || '');
+    const [groups, setGroups] = useState<string[]>([]);
+    const [selectedGroup, setSelectedGroup] = useState('');
+    const [studentsInGroup, setStudentsInGroup] = useState<Student[]>([]);
+
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [attendance, setAttendance] = useState<Record<string, 'present' | 'absent' | 'late'>>({});
     const [submitted, setSubmitted] = useState(false);
+    const [loading, setLoading] = useState(true);
 
-    const studentsInGroup = MOCK_STUDENTS.filter(s => s.group === selectedGroup);
+    // 1. Fetch Groups
+    useEffect(() => {
+        async function fetchGroups() {
+            setLoading(true);
+            const { data, error } = await supabase.from('groups').select('name').order('name');
+            if (data) {
+                const groupNames = data.map(g => g.name);
+                setGroups(groupNames);
+                if (groupNames.length > 0) setSelectedGroup(groupNames[0]);
+            }
+            setLoading(false);
+        }
+        fetchGroups();
+    }, []);
+
+    // 2. Fetch Students when Group changes
+    useEffect(() => {
+        async function fetchStudents() {
+            if (!selectedGroup) return;
+
+            const { data, error } = await supabase
+                .from('students')
+                .select('*')
+                .eq('group_name', selectedGroup)
+                .order('first_name');
+
+            if (data) {
+                const mappedStudents: Student[] = data.map(s => ({
+                    id: s.id,
+                    firstName: s.first_name,
+                    lastName: s.last_name,
+                    group: s.group_name || '',
+                    dob: s.dob,
+                    parentName: s.parent_name,
+                    phone: s.phone,
+                    status: s.status,
+                    badges: []
+                }));
+                setStudentsInGroup(mappedStudents);
+            }
+        }
+        fetchStudents();
+    }, [selectedGroup]);
 
     const handleStatusChange = (studentId: string, status: 'present' | 'absent' | 'late') => {
         setAttendance(prev => ({
@@ -80,7 +124,7 @@ export default function AttendancePage() {
                                     cursor: 'pointer'
                                 }}
                             >
-                                {GROUPS.map(g => (
+                                {groups.map(g => (
                                     <option key={g} value={g}>{g}</option>
                                 ))}
                             </select>
