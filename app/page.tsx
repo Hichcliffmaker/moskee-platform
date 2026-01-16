@@ -18,11 +18,28 @@ export default function Home() {
 
     // Fetch Stats & Name from DB
     async function fetchData() {
-      // 1. Stats
-      const countRes = await supabase.from('students').select('*', { count: 'exact', head: true }).eq('status', 'active');
-      setStats(prev => ({ ...prev, totalStudents: countRes.count || 0 }));
+      // 1. Stats - Total Students
+      const { count: studentCount } = await supabase.from('students').select('*', { count: 'exact', head: true }).eq('status', 'active');
+      const total = studentCount || 0;
 
-      // 2. Name
+      // 2. Stats - Today's Absences
+      const today = new Date().toISOString().split('T')[0];
+      const { count: absentCount } = await supabase
+        .from('absences')
+        .select('*', { count: 'exact', head: true })
+        .eq('date', today);
+
+      const realAbsent = absentCount || 0;
+      const presencePercentage = total > 0
+        ? Math.round(((total - realAbsent) / total) * 100)
+        : 100;
+
+      setStats({
+        totalStudents: total,
+        presence: `${presencePercentage}%`
+      });
+
+      // 3. Name
       const { data: naming } = await supabase.from('settings').select('*').eq('key', 'mosque_name').single();
       if (naming && naming.value) {
         setMosqueName(naming.value + ' Dashboard');

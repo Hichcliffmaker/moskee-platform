@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { supabase } from '../lib/supabase';
 
 export default function ParentLoginPage() {
     const router = useRouter();
@@ -10,16 +11,31 @@ export default function ParentLoginPage() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
-        // Simple mock check
-        // In reality, this would check against a backend
-        if (username.toLowerCase() === 'ouder' && password === '1234') {
-            router.push('/parent-portal');
-        } else {
-            setError('Ongeldige gegevens. Gebruik "ouder" en "1234".');
+        if (password !== '1234') {
+            setError('Onjuist wachtwoord. (Hint: 1234)');
+            return;
+        }
+
+        try {
+            // Find student by name (First Name Only for Demo)
+            const { data, error } = await supabase
+                .from('students')
+                .select('id, first_name')
+                .ilike('first_name', username.trim()) // Case insensitive match
+                .single();
+
+            if (error || !data) {
+                setError('Kon geen student vinden met deze naam.');
+            } else {
+                router.push(`/parent-portal?studentId=${data.id}`);
+            }
+        } catch (err) {
+            console.error(err);
+            setError('Login fout opgetreden.');
         }
     };
 

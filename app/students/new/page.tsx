@@ -1,16 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 
 export default function NewStudentPage() {
     const router = useRouter();
+    const [groups, setGroups] = useState<{ id: string, name: string }[]>([]);
+
+    // Form State
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
-        group: 'Groep 1 (Basis)',
+        group: '',
         dob: '',
         parentName: '',
         email: '',
@@ -18,6 +21,21 @@ export default function NewStudentPage() {
         address: ''
     });
     const [loading, setLoading] = useState(false);
+
+    // Fetch Groups
+    useEffect(() => {
+        async function fetchGroups() {
+            const { data } = await supabase.from('groups').select('id, name').order('name');
+            if (data && data.length > 0) {
+                setGroups(data);
+                // Set default group if not set
+                if (!formData.group) {
+                    setFormData(prev => ({ ...prev, group: data[0].name }));
+                }
+            }
+        }
+        fetchGroups();
+    }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -37,8 +55,8 @@ export default function NewStudentPage() {
                     dob: formData.dob || null,
                     parent_name: formData.parentName,
                     phone: formData.phone,
-                    email: formData.email,     // Nu toegevoegd!
-                    address: formData.address, // Nu toegevoegd!
+                    email: formData.email,
+                    address: formData.address,
                     status: 'active'
                 }
             ]);
@@ -105,16 +123,15 @@ export default function NewStudentPage() {
                             <label style={{ display: 'block', marginBottom: '8px', color: 'var(--color-text-muted)' }}>Groep / Klas</label>
                             <select
                                 name="group"
+                                required
                                 value={formData.group}
                                 onChange={handleChange}
                                 style={{ width: '100%', padding: '12px', background: '#0a1f18', border: '1px solid var(--color-border)', color: 'white', borderRadius: 'var(--radius-sm)' }}
                             >
-                                <option>Groep 1 (Basis)</option>
-                                <option>Groep 2 (Beginners)</option>
-                                <option>Groep 3 (Koran Basis)</option>
-                                <option>Groep 4 (Koran Hifz)</option>
-                                <option>Groep 5 (Fiqh & Tafsir)</option>
-                                <option>Groep 6 (Gevorderd)</option>
+                                <option value="" disabled>Selecteer een groep...</option>
+                                {groups.map(g => (
+                                    <option key={g.id} value={g.name}>{g.name}</option>
+                                ))}
                             </select>
                         </div>
                     </div>

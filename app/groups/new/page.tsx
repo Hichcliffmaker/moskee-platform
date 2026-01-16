@@ -16,30 +16,54 @@ export default function NewGroupPage() {
         description: ''
     });
 
-    // Schedule State
+    // Schedule State: Track times for each day independently
     const [selectedDays, setSelectedDays] = useState<string[]>([]);
-    const [startTime, setStartTime] = useState('10:00');
-    const [endTime, setEndTime] = useState('13:00');
+    const [dayTimes, setDayTimes] = useState<Record<string, { start: string, end: string }>>({});
 
     const [loading, setLoading] = useState(false);
 
     const handleDayToggle = (day: string) => {
         if (selectedDays.includes(day)) {
+            // Remove day
             setSelectedDays(selectedDays.filter(d => d !== day));
+            const newTimes = { ...dayTimes };
+            delete newTimes[day];
+            setDayTimes(newTimes);
         } else {
-            // Keep days sorted based on regular week order
+            // Add day with default times
             const newSelection = [...selectedDays, day];
+            // Sort based on week order
             newSelection.sort((a, b) => DAYS.indexOf(a) - DAYS.indexOf(b));
             setSelectedDays(newSelection);
+
+            // Set default time or copy from last added day for convenience
+            setDayTimes({
+                ...dayTimes,
+                [day]: { start: '10:00', end: '13:00' }
+            });
         }
+    };
+
+    const handleTimeChange = (day: string, type: 'start' | 'end', value: string) => {
+        setDayTimes({
+            ...dayTimes,
+            [day]: { ...dayTimes[day], [type]: value }
+        });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
 
-        const scheduleString = selectedDays.length > 0
-            ? `${selectedDays.join(' & ')} ${startTime} - ${endTime}`
+        // Build the schedule string
+        // Format: "Zaterdag 10:00-13:00 & Zondag 11:00-14:00"
+        const scheduleParts = selectedDays.map(day => {
+            const times = dayTimes[day];
+            return `${day} ${times.start}-${times.end}`;
+        });
+
+        const scheduleString = scheduleParts.length > 0
+            ? scheduleParts.join(' & ')
             : 'Geen roostertijden';
 
         const { error } = await supabase.from('groups').insert([{
@@ -54,7 +78,6 @@ export default function NewGroupPage() {
             alert('Fout bij opslaan: ' + error.message);
             setLoading(false);
         } else {
-            // Redirect to groups list
             router.push('/groups');
         }
     };
@@ -108,12 +131,12 @@ export default function NewGroupPage() {
                         </div>
                     </div>
 
-                    {/* New Schedule Selector */}
+                    {/* Flexible Schedule Selector */}
                     <div>
                         <label style={{ display: 'block', marginBottom: '12px', color: 'var(--color-text-muted)' }}>Lestijden & Dagen</label>
                         <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}>
 
-                            {/* Days */}
+                            {/* Day Buttons */}
                             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
                                 {DAYS.map(day => (
                                     <button
@@ -136,28 +159,41 @@ export default function NewGroupPage() {
                                 ))}
                             </div>
 
-                            {/* Time */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                <div>
-                                    <label style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', display: 'block', marginBottom: '4px' }}>Van</label>
-                                    <input
-                                        type="time"
-                                        value={startTime}
-                                        onChange={(e) => setStartTime(e.target.value)}
-                                        style={{ padding: '8px', borderRadius: '4px', border: '1px solid var(--color-border)', background: '#0a1f18', color: 'white' }}
-                                    />
+                            {/* Time Inputs Per Selected Day */}
+                            {selectedDays.length > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    {selectedDays.map(day => (
+                                        <div key={day} style={{
+                                            display: 'flex', alignItems: 'center', gap: '16px',
+                                            padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', border: '1px solid var(--color-border)'
+                                        }}>
+                                            <div style={{ width: '100px', fontWeight: 'bold', color: 'var(--color-gold)' }}>{day}</div>
+
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <input
+                                                    type="time"
+                                                    required
+                                                    value={dayTimes[day]?.start || '10:00'}
+                                                    onChange={(e) => handleTimeChange(day, 'start', e.target.value)}
+                                                    style={{ padding: '6px', borderRadius: '4px', border: '1px solid var(--color-border)', background: '#0a1f18', color: 'white' }}
+                                                />
+                                                <span style={{ color: 'var(--color-text-muted)' }}>tot</span>
+                                                <input
+                                                    type="time"
+                                                    required
+                                                    value={dayTimes[day]?.end || '13:00'}
+                                                    onChange={(e) => handleTimeChange(day, 'end', e.target.value)}
+                                                    style={{ padding: '6px', borderRadius: '4px', border: '1px solid var(--color-border)', background: '#0a1f18', color: 'white' }}
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                                <span style={{ color: 'var(--color-text-muted)', paddingTop: '18px' }}>tot</span>
-                                <div>
-                                    <label style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', display: 'block', marginBottom: '4px' }}>Tot</label>
-                                    <input
-                                        type="time"
-                                        value={endTime}
-                                        onChange={(e) => setEndTime(e.target.value)}
-                                        style={{ padding: '8px', borderRadius: '4px', border: '1px solid var(--color-border)', background: '#0a1f18', color: 'white' }}
-                                    />
+                            ) : (
+                                <div style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>
+                                    Selecteer hierboven de dagen om tijden in te stellen.
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
 
