@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { MOCK_GROUPS } from '../../lib/data';
 import { useRouter } from 'next/navigation';
+import { supabase } from '../../lib/supabase';
 
 export default function NewHomeworkPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [groups, setGroups] = useState<{ id: string, name: string }[]>([]);
+
     const [formData, setFormData] = useState({
         groupId: '',
         subject: 'Koran',
@@ -16,14 +18,39 @@ export default function NewHomeworkPage() {
         dueDate: ''
     });
 
-    const handleSubmit = (e: React.FormEvent) => {
+    // Fetch Groups from DB
+    useEffect(() => {
+        async function fetchGroups() {
+            const { data, error } = await supabase.from('groups').select('id, name').order('name');
+            if (data) {
+                setGroups(data);
+            } else if (error) {
+                console.error('Error fetching groups:', error);
+            }
+        }
+        fetchGroups();
+    }, []);
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        console.log("Creating homework", formData);
-        setTimeout(() => {
+
+        const { error } = await supabase.from('homework').insert([{
+            group_id: formData.groupId,
+            subject: formData.subject,
+            title: formData.title,
+            description: formData.description,
+            due_date: formData.dueDate,
+            created_at: new Date().toISOString()
+        }]);
+
+        if (error) {
+            alert('Fout bij opslaan: ' + error.message);
             setLoading(false);
+        } else {
+            // Success
             router.push('/homework');
-        }, 1500);
+        }
     }
 
     return (
@@ -44,7 +71,7 @@ export default function NewHomeworkPage() {
                             style={{ width: '100%', padding: '12px', background: '#0a1f18', border: '1px solid var(--color-border)', color: 'white', borderRadius: 'var(--radius-sm)' }}
                         >
                             <option value="" disabled>Selecteer een groep...</option>
-                            {MOCK_GROUPS.map(g => (
+                            {groups.map(g => (
                                 <option key={g.id} value={g.id}>{g.name}</option>
                             ))}
                         </select>

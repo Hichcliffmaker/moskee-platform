@@ -1,39 +1,53 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
-import { MOCK_GROUPS, MOCK_STUDENTS, MOCK_QURAN_PROGRESS, Student } from '../../lib/data';
+import { supabase } from '../../lib/supabase';
 
-// Helper to get dates in current month matching the lesson days (Mock: just getting all satiurdats/sundays for now)
-function getLessonDates(schedule: string) {
-    // This is a simplified mock. In real app, parse "Zaterdag" to get actual dates.
-    return [
-        "2026-01-03", "2026-01-04",
-        "2026-01-10", "2026-01-11",
-        "2026-01-17", "2026-01-18",
-        "2026-01-24", "2026-01-25",
-        "2026-01-31"
-    ];
-}
+// Helper for initials
+const getInitials = (firstName: string, lastName: string) => {
+    return (firstName?.[0] || '') + (lastName?.[0] || '');
+};
 
 export default function QuranGroupTracker({ params }: { params: Promise<{ groupId: string }> }) {
-    return <TrackerContent params={params} />
-}
+    const { groupId } = use(params);
+    const [group, setGroup] = useState<any>(null);
+    const [students, setStudents] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
-function TrackerContent({ params }: { params: Promise<{ groupId: string }> }) {
-    const [groupId, setGroupId] = useState<string | null>(null);
+    useEffect(() => {
+        async function fetchData() {
+            setLoading(true);
 
-    // Initial load
-    useState(() => {
-        params.then(p => setGroupId(p.groupId));
-    });
+            // 1. Fetch Group
+            const { data: groupData, error: groupError } = await supabase
+                .from('groups')
+                .select('*')
+                .eq('id', groupId)
+                .single();
 
-    if (!groupId) return <div style={{ padding: '40px' }}>Laden...</div>;
+            if (groupData) {
+                setGroup(groupData);
 
-    const group = MOCK_GROUPS.find(g => g.id === groupId);
-    const students = MOCK_STUDENTS.filter(s => s.group === group?.name || s.group.includes(group?.name.split('(')[0].trim() || 'XYZ'));
+                // 2. Fetch Students
+                const { data: studentData } = await supabase
+                    .from('students')
+                    .select('*')
+                    .eq('group_name', groupData.name);
 
-    if (!group) return <div>Groep niet gevonden</div>;
+                if (studentData) {
+                    setStudents(studentData);
+                }
+            } else {
+                console.error('Group not found:', groupError);
+            }
+            setLoading(false);
+        }
+        if (groupId) fetchData();
+    }, [groupId]);
+
+    if (loading) return <div style={{ padding: '40px', color: 'white' }}>Laden...</div>;
+    if (!group) return <div style={{ padding: '40px', color: 'white' }}>Groep niet gevonden</div>;
 
     return (
         <main style={{ padding: '40px' }}>
@@ -45,7 +59,7 @@ function TrackerContent({ params }: { params: Promise<{ groupId: string }> }) {
                     </div>
                     <div style={{ textAlign: 'right', color: 'var(--color-text-muted)' }}>
                         <div>Maand: <strong>Januari 2026</strong></div>
-                        <div style={{ marginBottom: '8px' }}>Docent: {group.teacher}</div>
+                        <div style={{ marginBottom: '8px' }}>Docent: {group.teacher || 'Geen Docent'}</div>
                         <Link href={`/quran-tracker/${groupId}/log`} className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '0.9rem' }}>
                             + Nieuwe Registratie
                         </Link>
@@ -68,9 +82,17 @@ function TrackerContent({ params }: { params: Promise<{ groupId: string }> }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {students.map(student => (
-                                <StudentTrackerRow key={student.id} student={student} />
-                            ))}
+                            {students.length > 0 ? (
+                                students.map(student => (
+                                    <StudentTrackerRow key={student.id} student={student} />
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={6} style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                                        Geen studenten found in deze groep.
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -86,19 +108,19 @@ function TrackerContent({ params }: { params: Promise<{ groupId: string }> }) {
     );
 }
 
-function StudentTrackerRow({ student }: { student: Student }) {
-    // Mock data aggegation
-    const totalPages = Math.floor(Math.random() * 5) + 1; // Fake calc
-    const totalRev = Math.floor(Math.random() * 2) + 1; // Fake calc
+function StudentTrackerRow({ student }: { student: any }) {
+    // Mock data aggegation for now
+    const totalPages = 0;
+    const totalRev = 0;
 
     return (
         <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
             <td style={{ padding: '16px', fontWeight: 'bold' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem' }}>
-                        {student.firstName[0]}
+                        {getInitials(student.first_name, student.last_name)}
                     </div>
-                    {student.firstName} {student.lastName}
+                    {student.first_name} {student.last_name}
                 </div>
             </td>
             {/* Week Cells using the new interactive component */}
@@ -107,14 +129,14 @@ function StudentTrackerRow({ student }: { student: Student }) {
                     <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '4px', padding: '8px', minHeight: '80px' }}>
                         <InteractiveGoal
                             title="Hifz"
-                            defaultGoal={week === 1 ? "P. 10-11" : ""}
-                            defaultStatus={week < 2 ? 'completed' : 'pending'}
+                            defaultGoal={week === 1 ? "Start" : ""}
+                            defaultStatus="pending"
                         />
                         <div style={{ margin: '8px 0', borderTop: '1px dashed #333' }}></div>
                         <InteractiveGoal
                             title="Muraja'ah"
-                            defaultGoal={week === 1 ? "Juz 29" : ""}
-                            defaultStatus={week < 2 ? 'completed' : 'pending'}
+                            defaultGoal=""
+                            defaultStatus="pending"
                         />
                     </div>
                 </td>
@@ -132,12 +154,6 @@ function InteractiveGoal({ title, defaultGoal, defaultStatus }: { title: string,
     const [status, setStatus] = useState(defaultStatus);
     const [note, setNote] = useState('');
     const [showPopover, setShowPopover] = useState(false);
-
-    const getStatusColor = () => {
-        if (status === 'completed') return '#81c784'; // Green
-        if (status === 'failed') return '#e57373'; // Red
-        return 'var(--color-text-muted)'; // Grey
-    };
 
     const getStatusIcon = () => {
         if (status === 'completed') return '✅';

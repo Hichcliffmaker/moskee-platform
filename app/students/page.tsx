@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MOCK_STUDENTS, Student } from '../lib/data';
+import { Student } from '../lib/data';
 import { supabase } from '../lib/supabase';
 import Link from 'next/link';
 

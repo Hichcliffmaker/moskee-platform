@@ -1,9 +1,32 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { MOCK_GROUPS } from '../lib/data';
+import { supabase } from '../lib/supabase';
 
 export default function QuranTrackerPage() {
-    // Only show groups relevant for Quran (mock filter)
-    const quranGroups = MOCK_GROUPS.filter(g => g.name.toLowerCase().includes('koran') || g.name.toLowerCase().includes('hifz') || g.name.toLowerCase().includes('basis'));
+    const [quranGroups, setQuranGroups] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function fetchGroups() {
+            setLoading(true);
+            const { data, error } = await supabase.from('groups').select('*');
+            if (data) {
+                // Filter relevant groups (Koran/Hifz/Basis)
+                const filtered = data.filter(g =>
+                    g.name.toLowerCase().includes('koran') ||
+                    g.name.toLowerCase().includes('hifz') ||
+                    g.name.toLowerCase().includes('basis')
+                );
+                setQuranGroups(filtered);
+            } else if (error) {
+                console.error('Error fetching groups:', error);
+            }
+            setLoading(false);
+        }
+        fetchGroups();
+    }, []);
 
     return (
         <main style={{ padding: '40px' }}>
@@ -14,20 +37,26 @@ export default function QuranTrackerPage() {
                     <p style={{ color: 'var(--color-text-muted)' }}>Selecteer een groep om voortgang te registreren.</p>
                 </header>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '24px' }}>
-                    {quranGroups.map(group => (
-                        <Link href={`/quran-tracker/${group.id}`} key={group.id} className="card" style={{ display: 'block', transition: 'all 0.2s', border: '1px solid var(--color-border)', cursor: 'pointer', background: 'linear-gradient(135deg, var(--color-bg-card), #08201a)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-                                <h2 className="heading-md">{group.name}</h2>
-                                <span style={{ fontSize: '2rem' }}>📖</span>
-                            </div>
-                            <div style={{ color: 'var(--color-text-muted)' }}>
-                                <div>🎓 {group.teacher}</div>
-                                <div>🕒 {group.schedule}</div>
-                            </div>
-                        </Link>
-                    ))}
-                </div>
+                {loading ? (
+                    <div style={{ color: 'var(--color-text-muted)' }}>Laden...</div>
+                ) : quranGroups.length === 0 ? (
+                    <div style={{ color: 'var(--color-text-muted)' }}>Geen Koran-gerelateerde groepen gevonden.</div>
+                ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '24px' }}>
+                        {quranGroups.map(group => (
+                            <Link href={`/quran-tracker/${group.id}`} key={group.id} className="card" style={{ display: 'block', transition: 'all 0.2s', border: '1px solid var(--color-border)', cursor: 'pointer', background: 'linear-gradient(135deg, var(--color-bg-card), #08201a)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+                                    <h2 className="heading-md">{group.name}</h2>
+                                    <span style={{ fontSize: '2rem' }}>📖</span>
+                                </div>
+                                <div style={{ color: 'var(--color-text-muted)' }}>
+                                    <div>🎓 {group.teacher || 'Geen docent'}</div>
+                                    <div>🕒 {group.schedule || '-'}</div>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                )}
             </div>
         </main>
     );

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { supabase } from '../../lib/supabase';
 
 export default function NewGroupPage() {
     const router = useRouter();
@@ -15,18 +16,25 @@ export default function NewGroupPage() {
     });
     const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
 
-        // Simulate API call
-        console.log('Creating group:', formData);
+        const { error } = await supabase.from('groups').insert([{
+            name: formData.name,
+            teacher: formData.teacher,
+            room: formData.room,
+            schedule: formData.schedule,
+            description: formData.description
+        }]);
 
-        setTimeout(() => {
+        if (error) {
+            alert('Fout bij opslaan: ' + error.message);
             setLoading(false);
+        } else {
             // Redirect to groups list
             router.push('/groups');
-        }, 1500);
+        }
     };
 
     return (
