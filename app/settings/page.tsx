@@ -11,6 +11,9 @@ export default function SettingsPage() {
     const [allowTeacherLogin, setAllowTeacherLogin] = useState(true);
     const [maintenanceMode, setMaintenanceMode] = useState(false);
 
+    // Theme State
+    const [theme, setTheme] = useState('midnight');
+
     // Admin Management State
     const [admins, setAdmins] = useState([
         { id: 1, name: 'admin', role: 'Super Admin' },
@@ -38,6 +41,18 @@ export default function SettingsPage() {
         }
         loadSettings();
     }, []);
+
+    useEffect(() => {
+        // Load theme from local storage
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) setTheme(savedTheme);
+    }, []);
+
+    const handleThemeChange = (newTheme: string) => {
+        setTheme(newTheme);
+        localStorage.setItem('theme', newTheme);
+        document.documentElement.setAttribute('data-theme', newTheme);
+    };
 
     const handleSaveSettings = async () => {
         setIsSaving(true);
@@ -172,6 +187,60 @@ export default function SettingsPage() {
                                         <option>Den Haag</option>
                                         <option>Utrecht</option>
                                     </select>
+                                </div>
+
+                                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '20px', paddingBottom: '20px' }}>
+                                    <h3 style={{ fontSize: '1.1rem', marginBottom: '16px', color: 'var(--color-text-main)' }}>Thema & Uiterlijk</h3>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '16px' }}>
+                                        {/* Midnight Gold */}
+                                        <button
+                                            onClick={() => handleThemeChange('midnight')}
+                                            style={{
+                                                border: theme === 'midnight' ? '2px solid var(--color-gold)' : '1px solid var(--color-border)',
+                                                borderRadius: '8px',
+                                                padding: '12px',
+                                                background: '#0a1f18',
+                                                cursor: 'pointer',
+                                                textAlign: 'center'
+                                            }}
+                                        >
+                                            <div style={{ width: '100%', height: '40px', background: 'linear-gradient(135deg, #0a1f18, #0f2e23)', borderRadius: '4px', marginBottom: '8px' }}></div>
+                                            <div style={{ color: 'white', fontSize: '0.9rem' }}>Midnight</div>
+                                        </button>
+
+                                        {/* Royal Blue */}
+                                        <button
+                                            onClick={() => handleThemeChange('royal')}
+                                            style={{
+                                                border: theme === 'royal' ? '2px solid #38bdf8' : '1px solid var(--color-border)',
+                                                borderRadius: '8px',
+                                                padding: '12px',
+                                                background: '#0f172a', /* Dark Blue preview background */
+                                                cursor: 'pointer',
+                                                textAlign: 'center'
+                                            }}
+                                        >
+                                            <div style={{ width: '100%', height: '40px', background: 'linear-gradient(135deg, #0f172a, #1e293b)', borderRadius: '4px', marginBottom: '8px' }}></div>
+                                            <div style={{ color: 'white', fontSize: '0.9rem' }}>Royal Blue</div>
+                                        </button>
+
+                                        {/* Desert Sand */}
+                                        <button
+                                            onClick={() => handleThemeChange('desert')}
+                                            style={{
+                                                border: theme === 'desert' ? '2px solid #b45309' : '1px solid var(--color-border)',
+                                                borderRadius: '8px',
+                                                padding: '12px',
+                                                background: '#fbf6f1', /* Light preview background */
+                                                cursor: 'pointer',
+                                                textAlign: 'center'
+                                            }}
+                                        >
+                                            <div style={{ width: '100%', height: '40px', background: 'linear-gradient(135deg, #fbf6f1, #e7e5e4)', borderRadius: '4px', marginBottom: '8px' }}></div>
+                                            <div style={{ color: '#422006', fontSize: '0.9rem' }}>Desert</div>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '20px' }}>

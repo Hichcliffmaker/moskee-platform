@@ -1,28 +1,51 @@
 :root {
-  /* Premium Moskee Palette */
-  --color-bg-main: #0a1f18; /* Very dark green, almost black */
-  --color-bg-card: #0f2e23; /* Deep rich green */
+  /* Default Theme: Midnight Gold */
+  --color-bg-main: #0a1f18;
+  --color-bg-card: #0f2e23;
   --color-bg-card-hover: #163d2f;
-  
   --color-gold: #d4af37;
   --color-gold-hover: #e5bd45;
   --color-gold-dim: #8a7326;
-  
   --color-text-main: #f0f4f1;
   --color-text-muted: #a3b8b0;
-  
   --color-border: #1f4f40;
-  
-  --shadow-sm: 0 2px 4px rgba(0,0,0,0.3);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
-  
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
-  
-  --font-heading: system-ui, -apple-system, sans-serif;
   --font-body: system-ui, -apple-system, sans-serif;
+}
+
+[data-theme='royal'] {
+  --color-bg-main: #0f172a;
+  --color-bg-card: #1e293b;
+  --color-bg-card-hover: #334155;
+  --color-gold: #38bdf8;
+  /* Sky Blue acting as accent */
+  --color-gold-hover: #0ea5e9;
+  --color-gold-dim: #0284c7;
+  --color-text-main: #f8fafc;
+  --color-text-muted: #94a3b8;
+  --color-border: #334155;
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme='desert'] {
+  --color-bg-main: #fbf6f1;
+  /* Warm Off-white */
+  --color-bg-card: #ffffff;
+  --color-bg-card-hover: #f3f4f6;
+  --color-gold: #b45309;
+  /* Bronze/Amber */
+  --color-gold-hover: #d97706;
+  --color-gold-dim: #92400e;
+  --color-text-main: #422006;
+  /* Dark Brown */
+  --color-text-muted: #78350f;
+  --color-border: #e7e5e4;
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 * {
@@ -80,7 +103,7 @@ a {
 
 .btn-ghost:hover {
   color: var(--color-text-main);
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .card {

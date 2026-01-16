@@ -31,6 +31,20 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={outfit.variable}>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var localTheme = localStorage.getItem('theme');
+                  if (localTheme) {
+                    document.documentElement.setAttribute('data-theme', localTheme);
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
         {children}
         <HomeButton />
       </body>
