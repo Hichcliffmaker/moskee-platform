@@ -66,11 +66,41 @@ export default function AttendancePage() {
         }));
     };
 
-    const handleSubmit = () => {
-        // In a real app, save to DB here
-        console.log('Saving attendance:', { date, group: selectedGroup, attendance });
-        setSubmitted(true);
-        setTimeout(() => setSubmitted(false), 3000);
+    const handleSubmit = async () => {
+        setLoading(true);
+        const updates = Object.entries(attendance).map(([studentId, status]) => ({
+            student_id: studentId,
+            date: date,
+            reason: status === 'present' ? 'Aanwezig' : status === 'late' ? 'Te Laat' : 'Afwezig',
+            // Defaulting group_name from selectedGroup, ideally we use ID if available or just string
+            group_name: selectedGroup 
+        }));
+
+        if (updates.length === 0) {
+             setLoading(false);
+             return;
+        }
+
+        // We delete existing for this date/student to avoid duplicates (simplest upsert strategy for MVP)
+        // Or we can use upsert if we have a unique constraint on student_id + date. 
+        // Let's try upsert. Assuming a constraint exists, otherwise we might duplicate.
+        // If unsure about constraint, delete + insert is safer for "re-submitting" same day.
+        
+        // Strategy: Delete all records for these students on this date first
+        const studentIds = updates.map(u => u.student_id);
+        await supabase.from('absences').delete().eq('date', date).in('student_id', studentIds);
+
+        // Insert new
+        const { error } = await supabase.from('absences').insert(updates);
+
+        if (error) {
+            console.error('Error saving attendance:', error);
+            alert('Fout bij opslaan: ' + error.message);
+        } else {
+            setSubmitted(true);
+            setTimeout(() => setSubmitted(false), 3000);
+        }
+        setLoading(false);
     };
 
     // Initialize all as present if not set

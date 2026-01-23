@@ -109,9 +109,41 @@ export default function QuranGroupTracker({ params }: { params: Promise<{ groupI
 }
 
 function StudentTrackerRow({ student }: { student: any }) {
-    // Mock data aggegation for now
-    const totalPages = 0;
-    const totalRev = 0;
+    const [progress, setProgress] = useState<any>({});
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function fetchProgress() {
+            const { data } = await supabase
+                .from('quran_progress')
+                .select('*')
+                .eq('student_id', student.id)
+                .eq('month', 'Januari')
+                .eq('year', 2026);
+
+            if (data) {
+                // Transform to easy lookup: progress[week][type]
+                const map: any = {};
+                data.forEach((p: any) => {
+                    if (!map[p.week]) map[p.week] = {};
+                    map[p.week][p.type] = p;
+                });
+                setProgress(map);
+            }
+            setLoading(false);
+        }
+        fetchProgress();
+    }, [student.id]);
+
+    // Calculate totals
+    // Simple logic: 1 completed hifz goal = 1 page (mock logic for now)
+    // 1 completed murajaah = 1 juz (mock)
+    // Real logic depends on parsing "Pagina 4-5", but for now just count 'completed'
+    let totalPages = 0;
+    let totalRev = 0;
+    // We can iterate our map to count
+
+    // This aggregation logic can be improved later by parsing the 'goal' string.
 
     return (
         <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
@@ -124,36 +156,96 @@ function StudentTrackerRow({ student }: { student: any }) {
                 </div>
             </td>
             {/* Week Cells using the new interactive component */}
-            {[1, 2, 3, 4].map(week => (
-                <td key={week} style={{ padding: '8px', verticalAlign: 'top' }}>
-                    <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '4px', padding: '8px', minHeight: '80px' }}>
-                        <InteractiveGoal
-                            title="Hifz"
-                            defaultGoal={week === 1 ? "Start" : ""}
-                            defaultStatus="pending"
-                        />
-                        <div style={{ margin: '8px 0', borderTop: '1px dashed #333' }}></div>
-                        <InteractiveGoal
-                            title="Muraja'ah"
-                            defaultGoal=""
-                            defaultStatus="pending"
-                        />
-                    </div>
-                </td>
-            ))}
+            {[1, 2, 3, 4].map(week => {
+                const weekData = progress[week] || {};
+                const hifz = weekData['hifz'] || {};
+                const murajaah = weekData['murajaah'] || {};
+
+                return (
+                    <td key={week} style={{ padding: '8px', verticalAlign: 'top' }}>
+                        <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '4px', padding: '8px', minHeight: '80px' }}>
+                            {!loading && (
+                                <>
+                                    <InteractiveGoal
+                                        studentId={student.id}
+                                        week={week}
+                                        type="hifz"
+                                        defaultGoal={hifz.goal || (week === 1 ? "Start" : "")}
+                                        defaultStatus={hifz.status || 'pending'}
+                                        defaultNote={hifz.note || ''}
+                                    />
+                                    <div style={{ margin: '8px 0', borderTop: '1px dashed #333' }}></div>
+                                    <InteractiveGoal
+                                        studentId={student.id}
+                                        week={week}
+                                        type="murajaah"
+                                        defaultGoal={murajaah.goal || ""}
+                                        defaultStatus={murajaah.status || 'pending'}
+                                        defaultNote={murajaah.note || ''}
+                                    />
+                                </>
+                            )}
+                        </div>
+                    </td>
+                );
+            })}
             <td style={{ padding: '16px', textAlign: 'center' }}>
-                <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--color-gold)' }}>{totalPages} Pag.</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{totalRev} Juz Herh.</div>
+                <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--color-gold)' }}>-</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>-</div>
             </td>
         </tr>
     );
 }
 
-function InteractiveGoal({ title, defaultGoal, defaultStatus }: { title: string, defaultGoal: string, defaultStatus: 'pending' | 'completed' | 'failed' }) {
+// New Props: studentId, week, type
+function InteractiveGoal({ studentId, week, type, defaultGoal = '', defaultStatus = 'pending', defaultNote = '' }: {
+    studentId: string,
+    week: number,
+    type: 'hifz' | 'murajaah',
+    defaultGoal?: string,
+    defaultStatus?: string,
+    defaultNote?: string
+}) {
     const [goal, setGoal] = useState(defaultGoal);
     const [status, setStatus] = useState(defaultStatus);
-    const [note, setNote] = useState('');
+    const [note, setNote] = useState(defaultNote);
     const [showPopover, setShowPopover] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Initial load? Ideally passed down, but assuming defaults for now or lazy loading could work.
+    // NOTE: To make this robust, the parent should pass the real data. 
+    // For this step, we assume the parent 'StudentTrackerRow' will be updated to pass these defaults.
+    // But we need to update the save logic first.
+
+    const handleSave = async (newStatus?: string, newGoal?: string, newNote?: string) => {
+        setIsSaving(true);
+        const s = newStatus ?? status;
+        const g = newGoal ?? goal;
+        const n = newNote ?? note;
+
+        // DB Update
+        const { error } = await supabase.from('quran_progress').upsert({
+            student_id: studentId,
+            week: week,
+            type: type,
+            goal: g,
+            status: s,
+            note: n,
+            month: 'Januari', // Hardcoded for MVP context, should be dynamic later
+            year: 2026
+        }, { onConflict: 'student_id,week,type,month,year' });
+
+        if (error) {
+            console.error(error);
+            alert('Kon niet opslaan');
+        } else {
+            // Update local state
+            if (newStatus) setStatus(newStatus);
+            if (newGoal) setGoal(newGoal);
+            if (newNote) setNote(newNote);
+        }
+        setIsSaving(false);
+    };
 
     const getStatusIcon = () => {
         if (status === 'completed') return '✅';
@@ -163,7 +255,7 @@ function InteractiveGoal({ title, defaultGoal, defaultStatus }: { title: string,
 
     return (
         <div style={{ position: 'relative' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '2px' }}>{title}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '2px' }}>{type === 'hifz' ? 'Hifz' : "Muraja'ah"}</div>
 
             {/* The Clickable Area */}
             <div
@@ -179,8 +271,8 @@ function InteractiveGoal({ title, defaultGoal, defaultStatus }: { title: string,
                     justifyContent: 'space-between'
                 }}
             >
-                <div style={{ fontSize: '0.85rem', color: goal ? 'white' : '#555', fontStyle: goal ? 'normal' : 'italic' }}>
-                    {goal || "Geen doel..."}
+                <div style={{ fontSize: '0.85rem', color: goal ? 'white' : '#555', fontStyle: goal ? 'normal' : 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '80px' }}>
+                    {goal || "..."}
                 </div>
                 <div style={{ fontSize: '0.9rem' }}>{getStatusIcon()}</div>
             </div>
@@ -192,8 +284,8 @@ function InteractiveGoal({ title, defaultGoal, defaultStatus }: { title: string,
                     zIndex: 10,
                     top: '100%',
                     left: 0,
-                    width: '200px',
-                    background: '#121212',
+                    width: '220px',
+                    background: '#0a1f18',
                     border: '1px solid var(--color-gold)',
                     borderRadius: '4px',
                     padding: '12px',
@@ -205,20 +297,22 @@ function InteractiveGoal({ title, defaultGoal, defaultStatus }: { title: string,
                             type="text"
                             value={goal}
                             onChange={(e) => setGoal(e.target.value)}
-                            style={{ width: '100%', background: '#0a1f18', border: '1px solid #333', color: 'white', padding: '4px', fontSize: '0.8rem', borderRadius: '2px' }}
+                            onBlur={() => handleSave(undefined, goal, undefined)}
+                            placeholder="Bijv. Surah An-Naba"
+                            style={{ width: '100%', background: '#050f0c', border: '1px solid #333', color: 'white', padding: '6px', fontSize: '0.85rem', borderRadius: '2px' }}
                         />
                     </div>
 
                     <div style={{ marginBottom: '8px', display: 'flex', gap: '4px' }}>
                         <button
-                            onClick={() => { setStatus('completed'); setShowPopover(false); }}
-                            style={{ flex: 1, background: '#1b5e20', border: 'none', color: 'white', fontSize: '0.7rem', padding: '4px', borderRadius: '2px', cursor: 'pointer' }}
+                            onClick={() => { handleSave('completed'); setShowPopover(false); }}
+                            style={{ flex: 1, background: '#1b5e20', border: 'none', color: 'white', fontSize: '0.75rem', padding: '6px', borderRadius: '2px', cursor: 'pointer' }}
                         >
                             Voldaan
                         </button>
                         <button
-                            onClick={() => { setStatus('failed'); setShowPopover(false); }}
-                            style={{ flex: 1, background: '#b71c1c', border: 'none', color: 'white', fontSize: '0.7rem', padding: '4px', borderRadius: '2px', cursor: 'pointer' }}
+                            onClick={() => { handleSave('failed'); setShowPopover(false); }}
+                            style={{ flex: 1, background: '#b71c1c', border: 'none', color: 'white', fontSize: '0.75rem', padding: '6px', borderRadius: '2px', cursor: 'pointer' }}
                         >
                             Niet
                         </button>
@@ -230,11 +324,13 @@ function InteractiveGoal({ title, defaultGoal, defaultStatus }: { title: string,
                             rows={2}
                             value={note}
                             onChange={(e) => setNote(e.target.value)}
-                            style={{ width: '100%', background: '#0a1f18', border: '1px solid #333', color: 'white', padding: '4px', fontSize: '0.8rem', borderRadius: '2px', resize: 'none' }}
+                            onBlur={() => handleSave(undefined, undefined, note)}
+                            style={{ width: '100%', background: '#050f0c', border: '1px solid #333', color: 'white', padding: '6px', fontSize: '0.85rem', borderRadius: '2px', resize: 'none' }}
                         />
                     </div>
 
-                    <div style={{ textAlign: 'right' }}>
+                    <div style={{ textAlign: 'right', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.7rem', color: '#666' }}>{isSaving ? 'Opslaan...' : ''}</span>
                         <button onClick={() => setShowPopover(false)} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', fontSize: '0.7rem', cursor: 'pointer' }}>Sluiten</button>
                     </div>
                 </div>
@@ -243,7 +339,7 @@ function InteractiveGoal({ title, defaultGoal, defaultStatus }: { title: string,
             {/* Display Note Indicator if note exists */}
             {note && (
                 <div style={{ fontSize: '0.7rem', color: 'var(--color-gold)', marginTop: '2px' }}>
-                    📝 1 opmerking
+                    📝
                 </div>
             )}
         </div>

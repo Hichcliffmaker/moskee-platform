@@ -25,7 +25,7 @@ Dit project is een modern, 'Magister-achtig' softwareplatform speciaal ontwikkel
 *   **Framework**: Next.js 15 (App Router)
 *   **Taal**: TypeScript
 *   **Styling**: Custom CSS (Geen frameworks) voor een unieke, premium uitstraling (Goud/Donkergroen).
-*   **Data**: Mock data architectuur (voorbereid op database integratie).
+*   **Data**: Supabase Integration (Live Database).
 
 ## 🚀 Aan de slag
 
