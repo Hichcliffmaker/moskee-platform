@@ -22,15 +22,17 @@ export default function GroupsPage() {
             setLoading(true);
             const { data, error } = await supabase
                 .from('groups')
-                .select('*, students(count)');
+                .select('*');
 
             if (error) {
                 console.error('Error fetching groups:', error);
+                alert('Fout bij ophalen groepen: ' + error.message); // Visible feedback
             } else if (data) {
+                console.log('Fetched groups:', data);
                 // Map to flatten the count
                 const formattedGroups = data.map(g => ({
                     ...g,
-                    studentsCount: g.students?.[0]?.count || 0
+                    studentsCount: 0 // Placeholder until we link table
                 }));
                 setGroups(formattedGroups);
             }
@@ -46,7 +48,8 @@ export default function GroupsPage() {
                 <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                         <h1 className="heading-lg">Klassen & Groepen</h1>
-                        <p style={{ color: 'var(--color-text-muted)' }}>Overzicht van alle lesgroepen, docenten en lokalen.</p>
+                        <p style={{ color: 'var(--color-text-muted)' }}>Overzicht van alle lesgroepen. (v1.1 FIX LOADED)</p>
+                        <p style={{ color: 'orange', fontSize: '0.8rem' }}>Debug: {groups.length} groepen gevonden.</p>
                     </div>
                     <Link href="/groups/new" className="btn btn-primary">
                         + &nbsp; Nieuwe Groep
@@ -54,7 +57,7 @@ export default function GroupsPage() {
                 </header>
 
                 {loading ? (
-                    <div style={{ color: 'var(--color-text-muted)' }}>Laden...</div>
+                    <div style={{ color: 'var(--color-text-muted)' }}>Laden... (Moment geduld)</div>
                 ) : groups.length === 0 ? (
                     <div className="card" style={{ textAlign: 'center', padding: '40px' }}>
                         <p style={{ color: 'var(--color-text-muted)' }}>Nog geen groepen aangemaakt.</p>

@@ -15,12 +15,10 @@ export default function SettingsPage() {
     const [theme, setTheme] = useState('midnight');
 
     // Admin Management State
-    const [admins, setAdmins] = useState([
-        { id: 1, name: 'admin', role: 'Super Admin' },
-        { id: 2, name: 'bestuur', role: 'Moderator' }
-    ]);
+    const [admins, setAdmins] = useState<any[]>([]);
     const [showAddAdmin, setShowAddAdmin] = useState(false);
     const [newAdminName, setNewAdminName] = useState('');
+    const [newAdminPassword, setNewAdminPassword] = useState(''); // New Password State
     const [newAdminRole, setNewAdminRole] = useState('Moderator');
 
     // Saving State
@@ -29,17 +27,23 @@ export default function SettingsPage() {
 
     // Initial load from Supabase
     useEffect(() => {
-        async function loadSettings() {
-            const { data } = await supabase.from('settings').select('*');
-            if (data) {
-                const nameSetting = data.find(s => s.key === 'mosque_name');
-                const citySetting = data.find(s => s.key === 'mosque_city');
-
+        async function loadData() {
+            // Settings
+            const { data: settingsData } = await supabase.from('settings').select('*');
+            if (settingsData) {
+                const nameSetting = settingsData.find(s => s.key === 'mosque_name');
+                const citySetting = settingsData.find(s => s.key === 'mosque_city');
                 if (nameSetting) setMosqueName(nameSetting.value);
                 if (citySetting) setCity(citySetting.value);
             }
+
+            // Admins
+            const { data: usersData } = await supabase.from('dashboard_users').select('*');
+            if (usersData) {
+                setAdmins(usersData);
+            }
         }
-        loadSettings();
+        loadData();
     }, []);
 
     useEffect(() => {
@@ -81,20 +85,37 @@ export default function SettingsPage() {
         }, 500);
     };
 
-    const handleAddAdmin = () => {
-        if (newAdminName.trim() === '') return;
-        const newAdmin = {
-            id: Date.now(),
-            name: newAdminName,
+    const handleAddAdmin = async () => {
+        if (newAdminName.trim() === '' || newAdminPassword.trim() === '') return;
+
+        const newUser = {
+            username: newAdminName,
+            password: newAdminPassword,
             role: newAdminRole
         };
-        setAdmins([...admins, newAdmin]);
-        setNewAdminName('');
-        setShowAddAdmin(false);
+
+        const { data, error } = await supabase.from('dashboard_users').insert([newUser]).select();
+
+        if (error) {
+            alert('Fout bij toevoegen: ' + error.message);
+        } else if (data) {
+            setAdmins([...admins, data[0]]);
+            setNewAdminName('');
+            setNewAdminPassword('');
+            setShowAddAdmin(false);
+        }
     };
 
-    const handleDeleteAdmin = (id: number) => {
-        setAdmins(admins.filter((a) => a.id !== id));
+    const handleDeleteAdmin = async (id: string) => {
+        if (!confirm('Weet je zeker dat je deze gebruiker wilt verwijderen?')) return;
+
+        const { error } = await supabase.from('dashboard_users').delete().eq('id', id);
+
+        if (error) {
+            alert('Fout bij verwijderen: ' + error.message);
+        } else {
+            setAdmins(admins.filter((a) => a.id !== id));
+        }
     };
 
 
@@ -328,7 +349,7 @@ export default function SettingsPage() {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                         {admins.map((admin) => (
                                             <div key={admin.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px' }}>
-                                                <span>{admin.name} ({admin.role})</span>
+                                                <span>{admin.username} ({admin.role})</span>
                                                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                                                     <span style={{ color: '#81c784', fontSize: '0.9rem' }}>Actief</span>
                                                     {admin.role !== 'Super Admin' && (
@@ -362,6 +383,13 @@ export default function SettingsPage() {
                                                     placeholder="Gebruikersnaam"
                                                     value={newAdminName}
                                                     onChange={(e) => setNewAdminName(e.target.value)}
+                                                    style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid var(--color-border)', color: 'white', borderRadius: '4px' }}
+                                                />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Wachtwoord"
+                                                    value={newAdminPassword}
+                                                    onChange={(e) => setNewAdminPassword(e.target.value)}
                                                     style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid var(--color-border)', color: 'white', borderRadius: '4px' }}
                                                 />
                                                 <select

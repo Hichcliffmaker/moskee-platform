@@ -15,23 +15,24 @@ export default function ParentLoginPage() {
         e.preventDefault();
         setError('');
 
-        if (password !== '1234') {
-            setError('Onjuist wachtwoord. (Hint: 1234)');
-            return;
-        }
-
         try {
-            // Find student by name (First Name Only for Demo)
-            const { data, error } = await supabase
-                .from('students')
-                .select('id, first_name')
-                .ilike('first_name', username.trim()) // Case insensitive match
-                .single();
+            // Use the database function to verify name + code securely
+            const { data: studentId, error } = await supabase
+                .rpc('verify_parent_code', {
+                    search_name: username.trim(),
+                    input_code: password
+                });
 
-            if (error || !data) {
-                setError('Kon geen student vinden met deze naam.');
+            if (error) {
+                console.error('Login error:', error);
+                setError('Er is een technische fout opgetreden.');
+                return;
+            }
+
+            if (!studentId) {
+                setError('Onjuiste combinatie van naam en code.');
             } else {
-                router.push(`/parent-portal?studentId=${data.id}`);
+                router.push(`/parent-portal?studentId=${studentId}`);
             }
         } catch (err) {
             console.error(err);

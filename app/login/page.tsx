@@ -17,17 +17,27 @@ export default function LoginPage() {
         setError('');
         setLoading(true);
 
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
+        try {
+            // Check credentials in dashboard_users table
+            const { data, error } = await supabase
+                .from('dashboard_users')
+                .select('*')
+                .eq('username', email) // Reusing 'email' state variable for username input
+                .eq('password', password)
+                .single();
 
-        if (error) {
-            setError(error.message);
+            if (error || !data) {
+                setError('Ongeldige gebruikersnaam of wachtwoord');
+                setLoading(false);
+            } else {
+                // Login successful - Set Local Session
+                localStorage.setItem('moskee_user', JSON.stringify(data));
+                router.push('/');
+            }
+        } catch (err) {
+            console.error(err);
+            setError('Er is een fout opgetreden');
             setLoading(false);
-        } else {
-            // Login successful!
-            router.push('/');
         }
     };
 
@@ -53,11 +63,11 @@ export default function LoginPage() {
                         </div>
                     )}
                     <div>
-                        <label style={{ display: 'block', marginBottom: '8px', color: 'var(--color-text-muted)' }}>Emailadres</label>
+                        <label style={{ display: 'block', marginBottom: '8px', color: 'var(--color-text-muted)' }}>Gebruikersnaam</label>
                         <input
-                            type="email"
+                            type="text"
                             required
-                            placeholder="naam@voorbeeld.nl"
+                            placeholder="Bijv. admin"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             style={{
