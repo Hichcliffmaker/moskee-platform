@@ -18,7 +18,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
     // Edit/Delete State
     const [isEditing, setIsEditing] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
-    const [formData, setFormData] = useState({ name: '', teacher: '', room: '', schedule: '' });
+    const [formData, setFormData] = useState({ name: '', type: '', teacher: '', room: '', schedule: '' });
 
     const router = require('next/navigation').useRouter(); // using require to avoid top-level import conflict if any
 
@@ -60,6 +60,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
         if (group) {
             setFormData({
                 name: group.name || '',
+                type: group.type || 'Overig',
                 teacher: group.teacher || '',
                 room: group.room || '',
                 schedule: group.schedule || ''
@@ -121,7 +122,14 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                     {isEditing ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             <h2 className="heading-md">Groep Bewerken</h2>
-                            <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Groepsnaam" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Groepsnaam" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
+                                <select value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }}>
+                                    <option value="Koran">Koran</option>
+                                    <option value="Arabisch">Arabisch</option>
+                                    <option value="Overig">Overig</option>
+                                </select>
+                            </div>
                             <input type="text" value={formData.room} onChange={e => setFormData({ ...formData, room: e.target.value })} placeholder="Lokaal" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
                             <input type="text" value={formData.teacher} onChange={e => setFormData({ ...formData, teacher: e.target.value })} placeholder="Docent" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
                             <input type="text" value={formData.schedule} onChange={e => setFormData({ ...formData, schedule: e.target.value })} placeholder="Tijden (bijv. Zo. 10:00 - 13:00)" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
@@ -134,7 +142,19 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                     ) : (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div>
-                                <h1 className="heading-lg" style={{ marginBottom: '8px' }}>{group.name}</h1>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                                    <h1 className="heading-lg" style={{ margin: 0 }}>{group.name}</h1>
+                                    <span style={{
+                                        padding: '4px 10px',
+                                        background: group.type === 'Koran' ? 'rgba(212, 175, 55, 0.2)' : group.type === 'Arabisch' ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255,255,255,0.1)',
+                                        color: group.type === 'Koran' ? 'var(--color-gold)' : group.type === 'Arabisch' ? '#81c784' : 'var(--color-text-muted)',
+                                        border: '1px solid currentColor',
+                                        borderRadius: '12px',
+                                        fontSize: '0.8rem', fontWeight: 'bold'
+                                    }}>
+                                        {group.type || 'Overig'}
+                                    </span>
+                                </div>
                                 <div style={{ fontSize: '1.2rem', color: 'var(--color-text-muted)', display: 'flex', gap: '24px' }}>
                                     <span>📍 {group.room || 'Geen lokaal'}</span>
                                     <span>🎓 {group.teacher || 'Geen docent'}</span>

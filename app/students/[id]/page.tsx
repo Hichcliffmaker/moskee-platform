@@ -38,6 +38,13 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
     // Quick Actions State
     const [isSickReported, setIsSickReported] = useState(false);
 
+    // Edit/Delete State
+    const [isEditing, setIsEditing] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [formData, setFormData] = useState<any>({});
+    const router = require('next/navigation').useRouter();
+
+
     // Fetch Student Data & Related Info
     useEffect(() => {
         async function fetchData() {
@@ -107,6 +114,69 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
         }
         if (id) fetchData();
     }, [id]);
+
+    useEffect(() => {
+        if (student) {
+            setFormData({
+                firstName: student.firstName,
+                lastName: student.lastName,
+                group: student.group,
+                dob: student.dob,
+                parentName: student.parentName,
+                phone: student.phone,
+                email: student.email,
+                address: student.address,
+                status: student.status
+            });
+        }
+
+        const userStr = localStorage.getItem('moskee_user');
+        if (userStr) {
+            const user = JSON.parse(userStr);
+            if (user.role === 'Super Admin' || user.role === 'Admin') {
+                setIsAdmin(true);
+            }
+        }
+    }, [student]);
+
+    const handleSave = async () => {
+        const { error } = await supabase
+            .from('students')
+            .update({
+                first_name: formData.firstName,
+                last_name: formData.lastName,
+                group_name: formData.group,
+                dob: formData.dob || null,
+                parent_name: formData.parentName,
+                phone: formData.phone,
+                email: formData.email,
+                address: formData.address,
+                status: formData.status
+            })
+            .eq('id', id);
+
+        if (error) {
+            alert('Fout bij opslaan: ' + error.message);
+        } else {
+            setStudent({ ...student!, ...formData });
+            setIsEditing(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!confirm('WEET JE HET ZEKER? Dit verwijdert het hele dossier inclusief cijfers en notities.')) return;
+
+        const { error } = await supabase
+            .from('students')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            alert('Fout bij verwijderen: ' + error.message);
+        } else {
+            router.push('/students');
+        }
+    };
 
     const handleReportSick = async () => {
         if (!student) return;
@@ -249,64 +319,94 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                 <div className="card" style={{ marginBottom: '30px', background: 'linear-gradient(135deg, var(--color-bg-card), #08201a)', position: 'relative', overflow: 'hidden' }}>
                     <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(212,175,55,0.1) 0%, rgba(0,0,0,0) 70%)', borderRadius: '50%' }}></div>
 
-                    <div style={{ display: 'flex', gap: '30px', alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>
-                        <div style={{
-                            width: '120px', height: '120px', borderRadius: '50%', backgroundColor: 'var(--color-bg-main)',
-                            border: '3px solid var(--color-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '3rem', color: 'var(--color-gold)', flexShrink: 0
-                        }}>
-                            {student.firstName[0]}{student.lastName[0]}
+                    {isEditing ? (
+                        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <h2 className="heading-md">Student Bewerken</h2>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                <input type="text" value={formData.firstName} onChange={e => setFormData({ ...formData, firstName: e.target.value })} placeholder="Voornaam" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
+                                <input type="text" value={formData.lastName} onChange={e => setFormData({ ...formData, lastName: e.target.value })} placeholder="Achternaam" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
+                                <input type="text" value={formData.group} onChange={e => setFormData({ ...formData, group: e.target.value })} placeholder="Groep" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
+                                <input type="text" value={formData.dob} onChange={e => setFormData({ ...formData, dob: e.target.value })} placeholder="Geboortedatum (YYYY-MM-DD)" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
+                                <input type="text" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder="Telefoon" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
+                                <input type="text" value={formData.parentName} onChange={e => setFormData({ ...formData, parentName: e.target.value })} placeholder="Naam Ouder" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
+                                <input type="text" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="Email" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
+                                <input type="text" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} placeholder="Adres" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
+                                <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })} style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }}>
+                                    <option value="active">Actief</option>
+                                    <option value="inactive">Inactief</option>
+                                </select>
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                <button onClick={handleSave} className="btn btn-primary">Opslaan</button>
+                                <button onClick={() => setIsEditing(false)} className="btn btn-ghost">Annuleren</button>
+                            </div>
                         </div>
+                    ) : (
+                        <div style={{ display: 'flex', gap: '30px', alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>
+                            <div style={{
+                                width: '120px', height: '120px', borderRadius: '50%', backgroundColor: 'var(--color-bg-main)',
+                                border: '3px solid var(--color-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '3rem', color: 'var(--color-gold)', flexShrink: 0
+                            }}>
+                                {student.firstName[0]}{student.lastName[0]}
+                            </div>
 
-                        <div style={{ flex: 1, paddingTop: '10px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <div>
-                                    <h1 className="heading-lg" style={{ marginBottom: '8px' }}>{student.firstName} {student.lastName}</h1>
-                                    <p style={{ fontSize: '1.2rem', color: 'var(--color-text-muted)' }}>{student.group} • {student.id}</p>
-                                </div>
-                                <div style={{ textAlign: 'right' }}>
-                                    <div style={{ marginBottom: '8px' }}>
-                                        <span style={{ padding: '6px 16px', background: 'rgba(76, 175, 80, 0.2)', color: '#81c784', border: '1px solid rgba(76, 175, 80, 0.3)', borderRadius: '20px', fontWeight: 'bold' }}>
-                                            {student.status === 'active' ? 'Actief' : 'Inactief'}
-                                        </span>
+                            <div style={{ flex: 1, paddingTop: '10px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <div>
+                                        <h1 className="heading-lg" style={{ marginBottom: '8px' }}>{student.firstName} {student.lastName}</h1>
+                                        <p style={{ fontSize: '1.2rem', color: 'var(--color-text-muted)' }}>{student.group} • {student.id}</p>
+                                    </div>
+                                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+                                        <div style={{ marginBottom: '8px' }}>
+                                            <span style={{ padding: '6px 16px', background: 'rgba(76, 175, 80, 0.2)', color: '#81c784', border: '1px solid rgba(76, 175, 80, 0.3)', borderRadius: '20px', fontWeight: 'bold' }}>
+                                                {student.status === 'active' ? 'Actief' : 'Inactief'}
+                                            </span>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <button onClick={() => setIsEditing(true)} className="btn btn-ghost" style={{ border: '1px solid var(--color-border)', fontSize: '0.8rem' }}>✏️ Bewerk</button>
+                                            {isAdmin && (
+                                                <button onClick={handleDelete} className="btn btn-ghost" style={{ border: '1px solid rgba(244, 67, 54, 0.3)', color: '#e57373', fontSize: '0.8rem' }}>🗑️</button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div style={{ marginTop: '24px', display: 'flex', gap: '40px', borderTop: '1px solid var(--color-border)', paddingTop: '20px' }}>
-                                <div>
-                                    <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>OUDER / VOOGD</div>
-                                    <div style={{ fontWeight: '600' }}>{student.parentName}</div>
+                                <div style={{ marginTop: '24px', display: 'flex', gap: '40px', borderTop: '1px solid var(--color-border)', paddingTop: '20px' }}>
+                                    <div>
+                                        <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>OUDER / VOOGD</div>
+                                        <div style={{ fontWeight: '600' }}>{student.parentName}</div>
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>TELEFOONNR.</div>
+                                        <div style={{ fontWeight: '600' }}>{student.phone}</div>
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>GEBOORTEDATUM</div>
+                                        <div style={{ fontWeight: '600' }}>{student.dob}</div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>TELEFOONNR.</div>
-                                    <div style={{ fontWeight: '600' }}>{student.phone}</div>
-                                </div>
-                                <div>
-                                    <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>GEBOORTEDATUM</div>
-                                    <div style={{ fontWeight: '600' }}>{student.dob}</div>
-                                </div>
-                            </div>
 
-                            {/* Extra Contact Info Row */}
-                            {(student.email || student.address) && (
-                                <div style={{ marginTop: '16px', display: 'flex', gap: '40px' }}>
-                                    {student.email && (
-                                        <div>
-                                            <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>EMAILADRES</div>
-                                            <div style={{ fontWeight: '600' }}>{student.email}</div>
-                                        </div>
-                                    )}
-                                    {student.address && (
-                                        <div>
-                                            <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>ADRES</div>
-                                            <div style={{ fontWeight: '600' }}>{student.address}</div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                                {/* Extra Contact Info Row */}
+                                {(student.email || student.address) && (
+                                    <div style={{ marginTop: '16px', display: 'flex', gap: '40px' }}>
+                                        {student.email && (
+                                            <div>
+                                                <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>EMAILADRES</div>
+                                                <div style={{ fontWeight: '600' }}>{student.email}</div>
+                                            </div>
+                                        )}
+                                        {student.address && (
+                                            <div>
+                                                <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>ADRES</div>
+                                                <div style={{ fontWeight: '600' }}>{student.address}</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 {/* Tabs / Sub-navigation */}

@@ -28,6 +28,7 @@ export type Group = {
     room: string;
     schedule: string;
     studentsCount: number;
+    type?: string; // e.g. 'Koran', 'Arabisch', 'Overig'
 };
 
 export type Homework = {

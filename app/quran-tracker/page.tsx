@@ -13,12 +13,8 @@ export default function QuranTrackerPage() {
             setLoading(true);
             const { data, error } = await supabase.from('groups').select('*');
             if (data) {
-                // Filter relevant groups (Koran/Hifz/Basis)
-                const filtered = data.filter(g =>
-                    g.name.toLowerCase().includes('koran') ||
-                    g.name.toLowerCase().includes('hifz') ||
-                    g.name.toLowerCase().includes('basis')
-                );
+                // Filter relevant groups (Strictly Type 'Koran')
+                const filtered = data.filter(g => g.type === 'Koran');
                 setQuranGroups(filtered);
             } else if (error) {
                 console.error('Error fetching groups:', error);

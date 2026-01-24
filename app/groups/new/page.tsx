@@ -11,6 +11,7 @@ export default function NewGroupPage() {
     const router = useRouter();
     const [formData, setFormData] = useState({
         name: '',
+        type: 'Koran', // Default
         teacher: '',
         room: '',
         description: ''
@@ -68,6 +69,7 @@ export default function NewGroupPage() {
 
         const { error } = await supabase.from('groups').insert([{
             name: formData.name,
+            type: formData.type,
             teacher: formData.teacher,
             room: formData.room,
             schedule: scheduleString,
@@ -104,6 +106,19 @@ export default function NewGroupPage() {
                             placeholder="Bijv. Groep 4 (Koran - Hifz)"
                             style={{ width: '100%', padding: '12px', background: '#0a1f18', border: '1px solid var(--color-border)', color: 'white', borderRadius: 'var(--radius-sm)' }}
                         />
+                    </div>
+
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', color: 'var(--color-text-muted)' }}>Type Les</label>
+                        <select
+                            value={formData.type}
+                            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                            style={{ width: '100%', padding: '12px', background: '#0a1f18', border: '1px solid var(--color-border)', color: 'white', borderRadius: 'var(--radius-sm)' }}
+                        >
+                            <option value="Koran">Koran</option>
+                            <option value="Arabisch">Arabisch</option>
+                            <option value="Overig">Overig</option>
+                        </select>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
