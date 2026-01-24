@@ -15,6 +15,13 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
     const [students, setStudents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
+    // Edit/Delete State
+    const [isEditing, setIsEditing] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [formData, setFormData] = useState({ name: '', teacher: '', room: '', schedule: '' });
+
+    const router = require('next/navigation').useRouter(); // using require to avoid top-level import conflict if any
+
     useEffect(() => {
         async function fetchData() {
             setLoading(true);
@@ -48,6 +55,56 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
     }, [id]);
 
 
+    // Check Admin & Init Form
+    useEffect(() => {
+        if (group) {
+            setFormData({
+                name: group.name || '',
+                teacher: group.teacher || '',
+                room: group.room || '',
+                schedule: group.schedule || ''
+            });
+        }
+
+        // Simple Admin Check (Client Side for UI only)
+        const userStr = localStorage.getItem('moskee_user');
+        if (userStr) {
+            const user = JSON.parse(userStr);
+            if (user.role === 'Super Admin' || user.role === 'Admin') {
+                setIsAdmin(true);
+            }
+        }
+    }, [group]);
+
+    const handleSave = async () => {
+        const { error } = await supabase
+            .from('groups')
+            .update(formData)
+            .eq('id', id);
+
+        if (error) {
+            alert('Fout bij opslaan: ' + error.message);
+        } else {
+            setGroup({ ...group, ...formData });
+            setIsEditing(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!confirm('WEET JE HET ZEKER? Alle gekoppelde data kan verloren gaan.')) return;
+
+        const { error } = await supabase
+            .from('groups')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            alert('Fout bij verwijderen: ' + error.message);
+        } else {
+            router.push('/groups');
+        }
+    };
+
     if (loading) return <div style={{ padding: '40px', color: 'white' }}>Laden...</div>;
     if (!group) return <div style={{ padding: '40px', color: 'white' }}>Groep niet gevonden</div>;
 
@@ -61,19 +118,39 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
 
                 <div className="card" style={{ marginBottom: '30px', background: 'linear-gradient(135deg, var(--color-bg-card), #08201a)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                            <h1 className="heading-lg" style={{ marginBottom: '8px' }}>{group.name}</h1>
-                            <div style={{ fontSize: '1.2rem', color: 'var(--color-text-muted)', display: 'flex', gap: '24px' }}>
-                                <span>📍 {group.room || 'Geen lokaal'}</span>
-                                <span>🎓 {group.teacher || 'Geen docent'}</span>
-                                <span>🕒 {group.schedule || '-'}</span>
+                    {isEditing ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <h2 className="heading-md">Groep Bewerken</h2>
+                            <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Groepsnaam" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
+                            <input type="text" value={formData.room} onChange={e => setFormData({ ...formData, room: e.target.value })} placeholder="Lokaal" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
+                            <input type="text" value={formData.teacher} onChange={e => setFormData({ ...formData, teacher: e.target.value })} placeholder="Docent" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
+                            <input type="text" value={formData.schedule} onChange={e => setFormData({ ...formData, schedule: e.target.value })} placeholder="Tijden (bijv. Zo. 10:00 - 13:00)" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
+
+                            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                <button onClick={handleSave} className="btn btn-primary">Opslaan</button>
+                                <button onClick={() => setIsEditing(false)} className="btn btn-ghost">Annuleren</button>
                             </div>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                            <button className="btn btn-primary">Bewerk Groep</button>
+                    ) : (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                                <h1 className="heading-lg" style={{ marginBottom: '8px' }}>{group.name}</h1>
+                                <div style={{ fontSize: '1.2rem', color: 'var(--color-text-muted)', display: 'flex', gap: '24px' }}>
+                                    <span>📍 {group.room || 'Geen lokaal'}</span>
+                                    <span>🎓 {group.teacher || 'Geen docent'}</span>
+                                    <span>🕒 {group.schedule || '-'}</span>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button onClick={() => setIsEditing(true)} className="btn btn-primary">Bewerk Groep</button>
+                                {isAdmin && (
+                                    <button onClick={handleDelete} className="btn" style={{ background: 'rgba(244, 67, 54, 0.2)', color: '#e57373', border: '1px solid rgba(244, 67, 54, 0.3)' }}>
+                                        🗑️ Verwijder
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 <div>
