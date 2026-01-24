@@ -18,7 +18,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
     // Edit/Delete State
     const [isEditing, setIsEditing] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
-    const [formData, setFormData] = useState({ name: '', type: '', teacher: '', room: '', schedule: '' });
+    const [formData, setFormData] = useState({ name: '', type: '', teacher: '', room: '', schedule: '', description: '' });
 
     const router = require('next/navigation').useRouter(); // using require to avoid top-level import conflict if any
 
@@ -63,7 +63,8 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                 type: group.type || 'Overig',
                 teacher: group.teacher || '',
                 room: group.room || '',
-                schedule: group.schedule || ''
+                schedule: group.schedule || '',
+                description: group.description || ''
             });
         }
 
@@ -80,13 +81,20 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
     const handleSave = async () => {
         const { error } = await supabase
             .from('groups')
-            .update(formData)
+            .update({
+                name: formData.name,
+                type: formData.type,
+                teacher: formData.teacher,
+                room: formData.room,
+                schedule: formData.schedule,
+                description: formData.description
+            })
             .eq('id', id);
 
         if (error) {
             alert('Fout bij opslaan: ' + error.message);
         } else {
-            setGroup({ ...group, ...formData });
+            setGroup({ ...group!, ...formData });
             setIsEditing(false);
         }
     };
@@ -120,23 +128,47 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
 
                 <div className="card" style={{ marginBottom: '30px', background: 'linear-gradient(135deg, var(--color-bg-card), #08201a)' }}>
                     {isEditing ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                             <h2 className="heading-md">Groep Bewerken</h2>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Groepsnaam" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
-                                <select value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }}>
+
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--color-text-muted)' }}>Naam Groep</label>
+                                <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid #333', color: 'white', borderRadius: '4px' }} />
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--color-text-muted)' }}>Type Les</label>
+                                <select value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid #333', color: 'white', borderRadius: '4px' }}>
                                     <option value="Koran">Koran</option>
                                     <option value="Arabisch">Arabisch</option>
                                     <option value="Overig">Overig</option>
                                 </select>
                             </div>
-                            <input type="text" value={formData.room} onChange={e => setFormData({ ...formData, room: e.target.value })} placeholder="Lokaal" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
-                            <input type="text" value={formData.teacher} onChange={e => setFormData({ ...formData, teacher: e.target.value })} placeholder="Docent" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
-                            <input type="text" value={formData.schedule} onChange={e => setFormData({ ...formData, schedule: e.target.value })} placeholder="Tijden (bijv. Zo. 10:00 - 13:00)" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
 
-                            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                                <button onClick={handleSave} className="btn btn-primary">Opslaan</button>
-                                <button onClick={() => setIsEditing(false)} className="btn btn-ghost">Annuleren</button>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '8px', color: 'var(--color-text-muted)' }}>Docent</label>
+                                    <input type="text" value={formData.teacher} onChange={e => setFormData({ ...formData, teacher: e.target.value })} style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid #333', color: 'white', borderRadius: '4px' }} />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '8px', color: 'var(--color-text-muted)' }}>Lokaal</label>
+                                    <input type="text" value={formData.room} onChange={e => setFormData({ ...formData, room: e.target.value })} style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid #333', color: 'white', borderRadius: '4px' }} />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--color-text-muted)' }}>Lestijden (Tekst)</label>
+                                <input type="text" value={formData.schedule} onChange={e => setFormData({ ...formData, schedule: e.target.value })} placeholder="Bijv. Za 10:00-13:00" style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid #333', color: 'white', borderRadius: '4px' }} />
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--color-text-muted)' }}>Beschrijving</label>
+                                <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Korte beschrijving van de groep" style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid #333', color: 'white', borderRadius: '4px', minHeight: '80px' }} />
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '16px', marginTop: '20px' }}>
+                                <button onClick={handleSave} className="btn btn-primary" style={{ flex: 1 }}>Opslaan</button>
+                                <button onClick={() => setIsEditing(false)} className="btn btn-ghost" style={{ flex: 1, border: '1px solid var(--color-border)' }}>Annuleren</button>
                             </div>
                         </div>
                     ) : (
@@ -173,7 +205,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                     )}
                 </div>
 
-                <div>
+                <div style={{ display: isEditing ? 'none' : 'block' }}>
                     <h2 className="heading-md" style={{ marginBottom: '20px' }}>Studenten in deze groep</h2>
 
                     {students.length === 0 ? (

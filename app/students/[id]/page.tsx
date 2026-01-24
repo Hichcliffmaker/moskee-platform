@@ -42,6 +42,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
     const [isEditing, setIsEditing] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
     const [formData, setFormData] = useState<any>({});
+    const [groups, setGroups] = useState<{ id: string, name: string }[]>([]);
     const router = require('next/navigation').useRouter();
 
 
@@ -59,12 +60,17 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
 
             if (studentData) {
                 // Fetch related data in parallel
-                const [gradesRes, absencesRes, notesRes, badgesRes] = await Promise.all([
+                const [gradesRes, absencesRes, notesRes, badgesRes, groupsRes] = await Promise.all([
                     supabase.from('grades').select('*').eq('student_id', id).order('date', { ascending: false }),
                     supabase.from('absences').select('*').eq('student_id', id).order('date', { ascending: false }),
                     supabase.from('notes').select('*').eq('student_id', id).order('created_at', { ascending: false }),
-                    supabase.from('badges').select('*').eq('student_id', id).order('date', { ascending: false })
+                    supabase.from('badges').select('*').eq('student_id', id).order('date', { ascending: false }),
+                    supabase.from('groups').select('id, name').order('name')
                 ]);
+
+                if (groupsRes.data) {
+                    setGroups(groupsRes.data);
+                }
 
                 setStudent({
                     id: studentData.id,
@@ -320,25 +326,57 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                     <div style={{ position: 'absolute', top: '-50px', right: '-50px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(212,175,55,0.1) 0%, rgba(0,0,0,0) 70%)', borderRadius: '50%' }}></div>
 
                     {isEditing ? (
-                        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
                             <h2 className="heading-md">Student Bewerken</h2>
+
+                            <h3 className="heading-sm" style={{ color: 'var(--color-text-muted)' }}>Persoonsgegevens</h3>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                <input type="text" value={formData.firstName} onChange={e => setFormData({ ...formData, firstName: e.target.value })} placeholder="Voornaam" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
-                                <input type="text" value={formData.lastName} onChange={e => setFormData({ ...formData, lastName: e.target.value })} placeholder="Achternaam" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
-                                <input type="text" value={formData.group} onChange={e => setFormData({ ...formData, group: e.target.value })} placeholder="Groep" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
-                                <input type="text" value={formData.dob} onChange={e => setFormData({ ...formData, dob: e.target.value })} placeholder="Geboortedatum (YYYY-MM-DD)" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
-                                <input type="text" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder="Telefoon" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
-                                <input type="text" value={formData.parentName} onChange={e => setFormData({ ...formData, parentName: e.target.value })} placeholder="Naam Ouder" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
-                                <input type="text" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="Email" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
-                                <input type="text" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} placeholder="Adres" style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }} />
-                                <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })} style={{ padding: '8px', background: '#0a1f18', border: '1px solid #333', color: 'white' }}>
-                                    <option value="active">Actief</option>
-                                    <option value="inactive">Inactief</option>
-                                </select>
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Voornaam</label>
+                                    <input type="text" value={formData.firstName} onChange={e => setFormData({ ...formData, firstName: e.target.value })} style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid #333', color: 'white', borderRadius: '4px' }} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Achternaam</label>
+                                    <input type="text" value={formData.lastName} onChange={e => setFormData({ ...formData, lastName: e.target.value })} style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid #333', color: 'white', borderRadius: '4px' }} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Groep</label>
+                                    <select value={formData.group} onChange={e => setFormData({ ...formData, group: e.target.value })} style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid #333', color: 'white', borderRadius: '4px' }}>
+                                        <option value="">Selecteer groep...</option>
+                                        {groups.map(g => (
+                                            <option key={g.id} value={g.name}>{g.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Geboortedatum</label>
+                                    <input type="date" value={formData.dob} onChange={e => setFormData({ ...formData, dob: e.target.value })} style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid #333', color: 'white', borderRadius: '4px' }} />
+                                </div>
                             </div>
-                            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                                <button onClick={handleSave} className="btn btn-primary">Opslaan</button>
-                                <button onClick={() => setIsEditing(false)} className="btn btn-ghost">Annuleren</button>
+
+                            <h3 className="heading-sm" style={{ color: 'var(--color-text-muted)', marginTop: '10px' }}>Contactgegevens</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Naam Ouder/Voogd</label>
+                                    <input type="text" value={formData.parentName} onChange={e => setFormData({ ...formData, parentName: e.target.value })} style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid #333', color: 'white', borderRadius: '4px' }} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Telefoonnummer</label>
+                                    <input type="text" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid #333', color: 'white', borderRadius: '4px' }} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Emailadres</label>
+                                    <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid #333', color: 'white', borderRadius: '4px' }} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Adres</label>
+                                    <input type="text" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid #333', color: 'white', borderRadius: '4px' }} />
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '16px', marginTop: '20px' }}>
+                                <button onClick={handleSave} className="btn btn-primary" style={{ flex: 1 }}>Opslaan</button>
+                                <button onClick={() => setIsEditing(false)} className="btn btn-ghost" style={{ flex: 1, border: '1px solid var(--color-border)' }}>Annuleren</button>
                             </div>
                         </div>
                     ) : (
@@ -410,7 +448,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                 </div>
 
                 {/* Tabs / Sub-navigation */}
-                <div style={{ marginBottom: '30px', borderBottom: '1px solid var(--color-border)', display: 'flex', gap: '30px' }}>
+                <div style={{ marginBottom: '30px', borderBottom: '1px solid var(--color-border)', display: isEditing ? 'none' : 'flex', gap: '30px' }}>
                     <button onClick={() => setActiveTab('overview')} style={{ background: 'none', border: 'none', borderBottom: activeTab === 'overview' ? '3px solid var(--color-gold)' : '3px solid transparent', padding: '10px 0', color: activeTab === 'overview' ? 'var(--color-gold)' : 'var(--color-text-muted)', fontWeight: 'bold', cursor: 'pointer' }}>
                         Overzicht
                     </button>
@@ -425,7 +463,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                     </button>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: activeTab === 'overview' ? '2fr 1fr' : '1fr', gap: '24px' }}>
+                <div style={{ display: isEditing ? 'none' : 'grid', gridTemplateColumns: activeTab === 'overview' ? '2fr 1fr' : '1fr', gap: '24px' }}>
 
                     {/* OVERVIEW CONTENT */}
                     {activeTab === 'overview' && (
@@ -636,6 +674,6 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
 
                 </div>
             </div>
-        </main>
+        </main >
     );
 }
