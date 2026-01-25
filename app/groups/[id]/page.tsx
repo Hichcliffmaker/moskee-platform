@@ -23,6 +23,22 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
     const router = require('next/navigation').useRouter(); // using require to avoid top-level import conflict if any
 
     useEffect(() => {
+        const userStr = localStorage.getItem('moskee_user');
+        if (!userStr) {
+            window.location.href = '/login';
+            return;
+        }
+        const user = JSON.parse(userStr);
+        if (user.role === 'Parent') {
+            window.location.href = `/parent-portal?studentId=${user.studentId}`;
+            return;
+        }
+
+        // Simple Admin Check (Client Side for UI only) - moved here to be available earlier
+        if (user.role === 'Super Admin' || user.role === 'Admin') {
+            setIsAdmin(true);
+        }
+
         async function fetchData() {
             setLoading(true);
 
@@ -34,7 +50,22 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                 .single();
 
             if (groupData) {
+                // Permission Check for Docents
+                if (user.role === 'Docent' && groupData.teacher !== user.username) {
+                    alert('Geen toegang tot deze groep.');
+                    window.location.href = '/groups';
+                    return;
+                }
+
                 setGroup(groupData);
+                setFormData({
+                    name: groupData.name || '',
+                    type: groupData.type || 'Overig',
+                    teacher: groupData.teacher || '',
+                    room: groupData.room || '',
+                    schedule: groupData.schedule || '',
+                    description: groupData.description || ''
+                });
 
                 // 2. Fetch Students via name matching (as currently stored)
                 // Ideally this would be via group_id
@@ -48,6 +79,10 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                 }
             } else {
                 console.error('Group not found:', groupError);
+                // If group not found, and not redirected by docent check, maybe redirect to groups list
+                if (!groupError) { // Only if no specific error, otherwise the error message is more relevant
+                    router.push('/groups');
+                }
             }
             setLoading(false);
         }

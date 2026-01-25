@@ -11,12 +11,43 @@ export default function StudentsPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        async function fetchStudents() {
-            const { data, error } = await supabase
-                .from('students')
-                .select('*')
-                .order('created_at', { ascending: false });
+        const user = localStorage.getItem('moskee_user');
+        if (!user) {
+            window.location.href = '/login';
+            return;
+        }
+    }, []);
 
+    useEffect(() => {
+        async function fetchStudents() {
+            setLoading(true);
+
+            // Auth & Role Check
+            const userStr = localStorage.getItem('moskee_user');
+            const user = userStr ? JSON.parse(userStr) : null;
+
+            let query = supabase.from('students').select('*');
+
+            if (user && user.role === 'Docent') {
+                // First get the groups for this teacher
+                const { data: myGroups } = await supabase
+                    .from('groups')
+                    .select('name')
+                    .eq('teacher', user.username);
+
+                const groupNames = myGroups?.map(g => g.name) || [];
+
+                if (groupNames.length > 0) {
+                    query = query.in('group_name', groupNames);
+                } else {
+                    // If no groups found, return empty results
+                    setStudents([]);
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            const { data, error } = await query.order('first_name');
             if (data) {
                 // Map DB columns (snake_case) to our App type (camelCase)
                 const mappedStudents: Student[] = data.map(s => ({

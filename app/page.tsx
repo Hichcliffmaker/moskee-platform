@@ -12,6 +12,18 @@ export default function Home() {
   });
 
   useEffect(() => {
+    // Auth Check
+    const user = localStorage.getItem('moskee_user');
+    if (!user) {
+      window.location.href = '/login';
+      return;
+    }
+    const userData = JSON.parse(user);
+    if (userData.role === 'Parent') {
+      window.location.href = `/parent-portal?studentId=${userData.studentId}`;
+      return;
+    }
+
     // Initial load localstorage settings
     const savedName = localStorage.getItem('mosqueName');
     if (savedName) setMosqueName(savedName + ' Dashboard');
@@ -67,9 +79,13 @@ export default function Home() {
           </div>
           <div style={{ display: 'flex', gap: '16px' }}>
             <Link href="/students/new" className="btn btn-primary">Nieuwe Student</Link>
-            <Link href="/login" className="btn btn-ghost" style={{ border: '1px solid var(--color-border)' }}>
+            <button
+              onClick={() => { localStorage.removeItem('moskee_user'); window.location.href = '/login'; }}
+              className="btn btn-ghost"
+              style={{ border: '1px solid var(--color-border)', cursor: 'pointer' }}
+            >
               Uitloggen
-            </Link>
+            </button>
           </div>
         </header>
 

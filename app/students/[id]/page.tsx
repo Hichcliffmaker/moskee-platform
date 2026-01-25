@@ -51,6 +51,13 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
 
     // Fetch Student Data & Related Info
     useEffect(() => {
+        const userStr = localStorage.getItem('moskee_user');
+        if (!userStr) {
+            window.location.href = '/login';
+            return;
+        }
+        const user = JSON.parse(userStr);
+
         async function fetchData() {
             setLoading(true);
 
@@ -62,6 +69,21 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                 .single();
 
             if (studentData) {
+                // Permission Check for Docents
+                if (user.role === 'Docent') {
+                    const { data: groupData } = await supabase
+                        .from('groups')
+                        .select('teacher')
+                        .eq('name', studentData.group_name)
+                        .single();
+
+                    if (groupData?.teacher !== user.username) {
+                        alert('Geen toegang tot dit dossier.');
+                        window.location.href = '/students';
+                        return;
+                    }
+                }
+
                 // Fetch related data in parallel
                 const [gradesRes, absencesRes, notesRes, badgesRes, groupsRes, quranProgressRes] = await Promise.all([
                     supabase.from('grades').select('*').eq('student_id', id).order('date', { ascending: false }),

@@ -20,9 +20,22 @@ export default function GroupsPage() {
     useEffect(() => {
         async function fetchGroups() {
             setLoading(true);
-            const { data, error } = await supabase
+
+            // Auth & Role Check
+            const userStr = localStorage.getItem('moskee_user');
+            const user = userStr ? JSON.parse(userStr) : null;
+
+            let query = supabase
                 .from('groups')
                 .select('*');
+
+            // If Docent, only show their groups
+            if (user && user.role === 'Docent') {
+                query = query.eq('teacher', user.username);
+                // Note: This assumes username in dashboard_users matches teacher name in groups.
+            }
+
+            const { data, error } = await query.order('name');
 
             if (error) {
                 console.error('Error fetching groups:', error);
