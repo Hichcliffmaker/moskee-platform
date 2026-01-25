@@ -9,9 +9,22 @@ export default function QuranTrackerPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        const userStr = localStorage.getItem('moskee_user');
+        if (!userStr) {
+            window.location.href = '/login';
+            return;
+        }
+        const user = JSON.parse(userStr);
+
         async function fetchGroups() {
             setLoading(true);
-            const { data, error } = await supabase.from('groups').select('*');
+            let query = supabase.from('groups').select('*');
+
+            if (user.role === 'Docent') {
+                query = query.eq('teacher', user.username);
+            }
+
+            const { data, error } = await query.order('name');
             if (data) {
                 // Filter relevant groups (Strictly Type 'Koran')
                 const filtered = data.filter(g => g.type === 'Koran');

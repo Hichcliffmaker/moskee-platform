@@ -24,10 +24,24 @@ export default function SettingsPage() {
     // Saving State
     const [isSaving, setIsSaving] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     // Initial load from Supabase
     useEffect(() => {
-        async function loadData() {
+        const userStr = localStorage.getItem('moskee_user');
+        if (!userStr) {
+            window.location.href = '/login';
+            return;
+        }
+        const user = JSON.parse(userStr);
+        if (user.role !== 'Super Admin' && user.role !== 'Admin') {
+            alert('Enkel beheerders kunnen de instellingen wijzigen.');
+            window.location.href = '/';
+            return;
+        }
+
+        async function fetchSettings() {
+            setLoading(true);
             // Settings
             const { data: settingsData } = await supabase.from('settings').select('*');
             if (settingsData) {

@@ -16,6 +16,13 @@ export default function QuranGroupTracker({ params }: { params: Promise<{ groupI
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        const userStr = localStorage.getItem('moskee_user');
+        if (!userStr) {
+            window.location.href = '/login';
+            return;
+        }
+        const user = JSON.parse(userStr);
+
         async function fetchData() {
             setLoading(true);
 
@@ -27,6 +34,13 @@ export default function QuranGroupTracker({ params }: { params: Promise<{ groupI
                 .single();
 
             if (groupData) {
+                // Permission Check for Docents
+                if (user.role === 'Docent' && groupData.teacher !== user.username) {
+                    alert('Geen toegang tot deze groep.');
+                    window.location.href = '/quran-tracker';
+                    return;
+                }
+
                 setGroup(groupData);
 
                 // 2. Fetch Students
