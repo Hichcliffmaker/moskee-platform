@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 
 export default function SettingsPage() {
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState('general');
     const [mosqueName, setMosqueName] = useState('Al-Madrasa');
     const [city, setCity] = useState('Amsterdam');
