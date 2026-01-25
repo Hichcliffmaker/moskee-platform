@@ -18,7 +18,8 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
     // Edit/Delete State
     const [isEditing, setIsEditing] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
-    const [formData, setFormData] = useState({ name: '', type: '', teacher: '', room: '', schedule: '', description: '' });
+    const [formData, setFormData] = useState({ name: '', type: '', teacher: '', teacher_id: '', room: '', schedule: '', description: '' });
+    const [staffUsers, setStaffUsers] = useState<any[]>([]);
 
     const router = require('next/navigation').useRouter(); // using require to avoid top-level import conflict if any
 
@@ -49,9 +50,17 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                 .eq('id', id)
                 .single();
 
+            // 2. Fetch Staff Users for Dropdown
+            const { data: usersData } = await supabase
+                .from('dashboard_users')
+                .select('id, username, role')
+                .in('role', ['Admin', 'Super Admin', 'Docent', 'Moderator']);
+
+            if (usersData) setStaffUsers(usersData);
+
             if (groupData) {
                 // Permission Check for Docents
-                if (user.role === 'Docent' && groupData.teacher !== user.username) {
+                if (user.role === 'Docent' && groupData.teacher_id !== user.id) {
                     alert('Geen toegang tot deze groep.');
                     window.location.href = '/groups';
                     return;
@@ -62,6 +71,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                     name: groupData.name || '',
                     type: groupData.type || 'Overig',
                     teacher: groupData.teacher || '',
+                    teacher_id: groupData.teacher_id || '',
                     room: groupData.room || '',
                     schedule: groupData.schedule || '',
                     description: groupData.description || ''
@@ -97,19 +107,11 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                 name: group.name || '',
                 type: group.type || 'Overig',
                 teacher: group.teacher || '',
+                teacher_id: group.teacher_id || '',
                 room: group.room || '',
                 schedule: group.schedule || '',
                 description: group.description || ''
             });
-        }
-
-        // Simple Admin Check (Client Side for UI only)
-        const userStr = localStorage.getItem('moskee_user');
-        if (userStr) {
-            const user = JSON.parse(userStr);
-            if (user.role === 'Super Admin' || user.role === 'Admin') {
-                setIsAdmin(true);
-            }
         }
     }, [group]);
 
@@ -120,6 +122,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                 name: formData.name,
                 type: formData.type,
                 teacher: formData.teacher,
+                teacher_id: formData.teacher_id,
                 room: formData.room,
                 schedule: formData.schedule,
                 description: formData.description
@@ -183,7 +186,23 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '8px', color: 'var(--color-text-muted)' }}>Docent</label>
-                                    <input type="text" value={formData.teacher} onChange={e => setFormData({ ...formData, teacher: e.target.value })} style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid #333', color: 'white', borderRadius: '4px' }} />
+                                    <select
+                                        value={formData.teacher_id}
+                                        onChange={e => {
+                                            const selectedUser = staffUsers.find(u => u.id === e.target.value);
+                                            setFormData({
+                                                ...formData,
+                                                teacher_id: e.target.value,
+                                                teacher: selectedUser ? selectedUser.username : ''
+                                            });
+                                        }}
+                                        style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid #333', color: 'white', borderRadius: '4px' }}
+                                    >
+                                        <option value="">Selecteer Docent</option>
+                                        {staffUsers.map(user => (
+                                            <option key={user.id} value={user.id}>{user.username} ({user.role})</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '8px', color: 'var(--color-text-muted)' }}>Lokaal</label>
