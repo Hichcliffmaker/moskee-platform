@@ -21,6 +21,9 @@ export default function SettingsPage() {
     const [newAdminPassword, setNewAdminPassword] = useState(''); // New Password State
     const [newAdminRole, setNewAdminRole] = useState('Moderator');
 
+    // Parent Codes State
+    const [parentCodes, setParentCodes] = useState<any[]>([]);
+
     // Saving State
     const [isSaving, setIsSaving] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
@@ -56,6 +59,29 @@ export default function SettingsPage() {
             if (usersData) {
                 setAdmins(usersData);
             }
+
+            // Parent Codes (Fetch students + their codes)
+            const { data: studentsWithCodes } = await supabase
+                .from('students')
+                .select(`
+                    id, 
+                    first_name, 
+                    last_name, 
+                    group_name,
+                    parent_codes (code)
+                `)
+                .eq('status', 'active')
+                .order('first_name');
+
+            if (studentsWithCodes) {
+                setParentCodes(studentsWithCodes.map(s => ({
+                    id: s.id,
+                    name: `${s.first_name} ${s.last_name}`,
+                    group: s.group_name,
+                    code: s.parent_codes?.[0]?.code || ''
+                })));
+            }
+
             setLoading(false);
         }
         fetchSettings();
@@ -191,6 +217,21 @@ export default function SettingsPage() {
                             }}
                         >
                             Gebruikersbeheer
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('parent-codes')}
+                            style={{
+                                textAlign: 'left',
+                                padding: '12px 16px',
+                                borderRadius: 'var(--radius-sm)',
+                                background: activeTab === 'parent-codes' ? 'var(--color-bg-card)' : 'transparent',
+                                color: activeTab === 'parent-codes' ? 'var(--color-gold)' : 'var(--color-text-muted)',
+                                border: activeTab === 'parent-codes' ? '1px solid var(--color-border)' : '1px solid transparent',
+                                cursor: 'pointer',
+                                fontWeight: activeTab === 'parent-codes' ? 'bold' : 'normal'
+                            }}
+                        >
+                            Ouder Codes
                         </button>
                     </div>
 
@@ -428,9 +469,87 @@ export default function SettingsPage() {
                             </div>
                         )}
 
+                        {activeTab === 'parent-codes' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                <h2 className="heading-md">Ouder Toegangscodes</h2>
+                                <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>Hier kun je de pincodes beheren waarmee ouders kunnen inloggen in het portaal.</p>
+
+                                <div style={{ display: 'grid', gap: '12px' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <thead>
+                                            <tr style={{ borderBottom: '1px solid var(--color-border)', textAlign: 'left' }}>
+                                                <th style={{ padding: '12px 8px', color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>Student</th>
+                                                <th style={{ padding: '12px 8px', color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>Groep</th>
+                                                <th style={{ padding: '12px 8px', color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>Pincode</th>
+                                                <th style={{ padding: '12px 8px', textAlign: 'right' }}></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {parentCodes.map((item) => (
+                                                <ParentCodeRow key={item.id} item={item} onUpdate={fetchSettings} />
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
                     </div>
                 </div>
             </div>
         </main>
+    );
+}
+
+function ParentCodeRow({ item, onUpdate }: { item: any, onUpdate: () => void }) {
+    const [code, setCode] = useState(item.code);
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleUpdate = async () => {
+        setIsSaving(true);
+
+        // Upsert code in parent_codes table
+        const { error } = await supabase
+            .from('parent_codes')
+            .upsert({
+                student_id: item.id,
+                code: code
+            }, { onConflict: 'student_id' });
+
+        if (error) {
+            alert('Fout bij bijwerken code: ' + error.message);
+        } else {
+            onUpdate();
+        }
+        setIsSaving(false);
+    };
+
+    return (
+        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+            <td style={{ padding: '12px 8px', fontWeight: 'bold' }}>{item.name}</td>
+            <td style={{ padding: '12px 8px', color: 'var(--color-text-muted)' }}>{item.group}</td>
+            <td style={{ padding: '12px 8px' }}>
+                <input
+                    type="text"
+                    value={code}
+                    onChange={e => setCode(e.target.value)}
+                    placeholder="Geen code"
+                    style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid #333', color: 'white', padding: '4px 8px', borderRadius: '4px', width: '80px', textAlign: 'center' }}
+                />
+            </td>
+            <td style={{ padding: '12px 8px', textAlign: 'right' }}>
+                <button
+                    onClick={handleUpdate}
+                    disabled={isSaving || code === item.code}
+                    style={{
+                        background: 'none', border: '1px solid var(--color-gold)', color: 'var(--color-gold)',
+                        padding: '4px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem',
+                        opacity: (isSaving || code === item.code) ? 0.3 : 1
+                    }}
+                >
+                    {isSaving ? '...' : 'Opslaan'}
+                </button>
+            </td>
+        </tr>
     );
 }
