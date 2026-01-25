@@ -38,6 +38,10 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
     // Quran Progress State
     const [quranProgress, setQuranProgress] = useState<any[]>([]);
 
+    // Parent Code State
+    const [parentCode, setParentCode] = useState('');
+    const [isSavingCode, setIsSavingCode] = useState(false);
+
     // Quick Actions State
     const [isSickReported, setIsSickReported] = useState(false);
 
@@ -101,6 +105,15 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                 if (quranProgressRes.data) {
                     setQuranProgress(quranProgressRes.data);
                 }
+
+                // Fetch Parent Code
+                const { data: codeData } = await supabase
+                    .from('parent_codes')
+                    .select('code')
+                    .eq('student_id', id)
+                    .single();
+
+                if (codeData) setParentCode(codeData.code);
 
                 setStudent({
                     id: studentData.id,
@@ -302,6 +315,17 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
             setNotes([{ date: new Date().toLocaleDateString('nl-NL'), text: noteText }, ...notes]);
             setNoteText('');
         }
+    };
+
+    const handleUpdateParentCode = async () => {
+        setIsSavingCode(true);
+        const { error } = await supabase
+            .from('parent_codes')
+            .upsert({ student_id: id, code: parentCode }, { onConflict: 'student_id' });
+
+        if (error) alert('Fout bij opslaan code: ' + error.message);
+        else alert('✅ Pincode voor ouders bijgewerkt.');
+        setIsSavingCode(false);
     };
 
     return (
@@ -597,6 +621,28 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                                             style={{ border: '1px solid var(--color-border)', justifyContent: 'flex-start' }}
                                         >
                                             📞 Ouders Bellen
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="card">
+                                    <h2 className="heading-md">Ouder Portaal Toegang</h2>
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '12px' }}>Pincode voor het portaal:</p>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <input
+                                            type="text"
+                                            value={parentCode}
+                                            onChange={e => setParentCode(e.target.value)}
+                                            placeholder="Code"
+                                            style={{ flex: 1, padding: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--color-border)', color: 'white', borderRadius: '4px', textAlign: 'center', fontSize: '1.2rem', fontWeight: 'bold', letterSpacing: '2px' }}
+                                        />
+                                        <button
+                                            onClick={handleUpdateParentCode}
+                                            disabled={isSavingCode}
+                                            className="btn btn-primary"
+                                            style={{ padding: '8px 16px' }}
+                                        >
+                                            {isSavingCode ? '...' : 'OK'}
                                         </button>
                                     </div>
                                 </div>

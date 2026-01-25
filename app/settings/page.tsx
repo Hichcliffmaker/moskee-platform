@@ -486,7 +486,7 @@ export default function SettingsPage() {
                                         </thead>
                                         <tbody>
                                             {parentCodes.map((item) => (
-                                                <ParentCodeRow key={item.id} item={item} onUpdate={fetchSettings} />
+                                                <ParentCodeRow key={item.id} item={item} onUpdate={router.refresh} />
                                             ))}
                                         </tbody>
                                     </table>
