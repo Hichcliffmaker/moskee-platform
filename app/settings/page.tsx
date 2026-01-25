@@ -56,8 +56,9 @@ export default function SettingsPage() {
             if (usersData) {
                 setAdmins(usersData);
             }
+            setLoading(false);
         }
-        loadData();
+        fetchSettings();
     }, []);
 
     useEffect(() => {
@@ -413,6 +414,7 @@ export default function SettingsPage() {
                                                 >
                                                     <option>Moderator</option>
                                                     <option>Admin</option>
+                                                    <option>Docent</option>
                                                     <option>Lees-alleen</option>
                                                 </select>
                                                 <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
