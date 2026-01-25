@@ -75,13 +75,28 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
             if (studentData) {
                 // Permission Check for Docents
                 if (user.role === 'Docent') {
+                    // Check if docent is linked to this student's group via group_teachers
                     const { data: groupData } = await supabase
                         .from('groups')
-                        .select('teacher')
+                        .select('id')
                         .eq('name', studentData.group_name)
                         .single();
 
-                    if (groupData?.teacher !== user.username) {
+                    if (groupData) {
+                        const { data: link } = await supabase
+                            .from('group_teachers')
+                            .select('id')
+                            .eq('group_id', groupData.id)
+                            .eq('teacher_id', user.id)
+                            .single();
+
+                        if (!link) {
+                            alert('Geen toegang tot dit dossier.');
+                            window.location.href = '/students';
+                            return;
+                        }
+                    } else {
+                        // Group doesn't exist or student not in group
                         alert('Geen toegang tot dit dossier.');
                         window.location.href = '/students';
                         return;
