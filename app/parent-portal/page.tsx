@@ -15,6 +15,7 @@ function ParentPortalContent() {
     const [recentGrades, setRecentGrades] = useState<any[]>([]);
     const [homework, setHomework] = useState<any[]>([]);
     const [attendanceStats, setAttendanceStats] = useState({ sick: 0, total: 0 });
+    const [quranProgress, setQuranProgress] = useState<any[]>([]);
     const [announcement, setAnnouncement] = useState<any>(null);
 
     useEffect(() => {
@@ -42,13 +43,15 @@ function ParentPortalContent() {
                 setStudent(studentData);
 
                 // 2. Fetch Linked Data in Parallel
-                const [gradesRes, absencesRes, announcementRes] = await Promise.all([
+                const [gradesRes, absencesRes, announcementRes, quranRes] = await Promise.all([
                     supabase.from('grades').select('*').eq('student_id', studentId).order('date', { ascending: false }).limit(5),
                     supabase.from('absences').select('*').eq('student_id', studentId),
-                    supabase.from('announcements').select('*').order('date', { ascending: false }).limit(1).single()
+                    supabase.from('announcements').select('*').order('date', { ascending: false }).limit(1).single(),
+                    supabase.from('quran_progress').select('*').eq('student_id', studentId).order('year', { ascending: false }).order('month', { ascending: false }).order('week', { ascending: false }).limit(5)
                 ]);
 
                 setRecentGrades(gradesRes.data || []);
+                setQuranProgress(quranRes.data || []);
 
                 if (absencesRes.data) {
                     const sickCount = absencesRes.data.filter((a: any) => a.reason === 'Ziek').length;
@@ -171,6 +174,26 @@ function ParentPortalContent() {
                         >
                             Kind Ziekmelden
                         </button>
+                    </div>
+
+                    {/* Quran Progress */}
+                    <div className="card" style={{ gridColumn: 'span 1' }}>
+                        <h2 className="heading-md">Koran Voortgang</h2>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+                            {quranProgress.length > 0 ? quranProgress.map((p, i) => (
+                                <div key={i} style={{ padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '4px' }}>
+                                        <span style={{ fontWeight: 'bold', color: 'var(--color-gold)' }}>{p.type === 'hifz' ? 'Hifz' : "Muraja'ah"}</span>
+                                        <span style={{ color: p.status === 'completed' ? '#81c784' : p.status === 'failed' ? '#ef5350' : '#ffd700' }}>
+                                            {p.status === 'completed' ? 'Voldaan' : p.status === 'failed' ? 'Niet voldaan' : 'In afwachting'}
+                                        </span>
+                                    </div>
+                                    <div style={{ fontSize: '0.9rem' }}>{p.goal || '-'}</div>
+                                </div>
+                            )) : (
+                                <p style={{ color: 'var(--color-text-muted)' }}>Nog geen voortgang geregistreerd.</p>
+                            )}
+                        </div>
                     </div>
 
                 </div>

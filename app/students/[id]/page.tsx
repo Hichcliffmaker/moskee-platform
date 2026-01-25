@@ -28,12 +28,15 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
     const [loading, setLoading] = useState(true);
 
     // UI/Flow State
-    const [activeTab, setActiveTab] = useState<'overview' | 'grades' | 'absences' | 'notes'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'grades' | 'absences' | 'notes' | 'quran'>('overview');
     const [showAwardModal, setShowAwardModal] = useState(false);
 
     // Notes State
     const [noteText, setNoteText] = useState('');
     const [notes, setNotes] = useState<{ date: string, text: string }[]>([]);
+
+    // Quran Progress State
+    const [quranProgress, setQuranProgress] = useState<any[]>([]);
 
     // Quick Actions State
     const [isSickReported, setIsSickReported] = useState(false);
@@ -60,16 +63,21 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
 
             if (studentData) {
                 // Fetch related data in parallel
-                const [gradesRes, absencesRes, notesRes, badgesRes, groupsRes] = await Promise.all([
+                const [gradesRes, absencesRes, notesRes, badgesRes, groupsRes, quranProgressRes] = await Promise.all([
                     supabase.from('grades').select('*').eq('student_id', id).order('date', { ascending: false }),
                     supabase.from('absences').select('*').eq('student_id', id).order('date', { ascending: false }),
                     supabase.from('notes').select('*').eq('student_id', id).order('created_at', { ascending: false }),
                     supabase.from('badges').select('*').eq('student_id', id).order('date', { ascending: false }),
-                    supabase.from('groups').select('id, name').order('name')
+                    supabase.from('groups').select('id, name').order('name'),
+                    supabase.from('quran_progress').select('*').eq('student_id', id).order('year', { ascending: false }).order('month', { ascending: false }).order('week', { ascending: false })
                 ]);
 
                 if (groupsRes.data) {
                     setGroups(groupsRes.data);
+                }
+
+                if (quranProgressRes.data) {
+                    setQuranProgress(quranProgressRes.data);
                 }
 
                 setStudent({
@@ -461,6 +469,9 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                     <button onClick={() => setActiveTab('notes')} style={{ background: 'none', border: 'none', borderBottom: activeTab === 'notes' ? '3px solid var(--color-gold)' : '3px solid transparent', padding: '10px 0', color: activeTab === 'notes' ? 'var(--color-gold)' : 'var(--color-text-muted)', fontWeight: 'bold', cursor: 'pointer' }}>
                         Notities
                     </button>
+                    <button onClick={() => setActiveTab('quran')} style={{ background: 'none', border: 'none', borderBottom: activeTab === 'quran' ? '3px solid var(--color-gold)' : '3px solid transparent', padding: '10px 0', color: activeTab === 'quran' ? 'var(--color-gold)' : 'var(--color-text-muted)', fontWeight: 'bold', cursor: 'pointer' }}>
+                        Koran
+                    </button>
                 </div>
 
                 <div style={{ display: isEditing ? 'none' : 'grid', gridTemplateColumns: activeTab === 'overview' ? '2fr 1fr' : '1fr', gap: '24px' }}>
@@ -672,6 +683,28 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                         </div>
                     )}
 
+                    {/* QURAN TAB */}
+                    {activeTab === 'quran' && (
+                        <div className="card">
+                            <h2 className="heading-md" style={{ marginBottom: '20px' }}>Koran Voortgang</h2>
+                            <div style={{ display: 'grid', gap: '16px' }}>
+                                {quranProgress.length > 0 ? quranProgress.map((p, i) => (
+                                    <div key={i} style={{ padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', borderLeft: `4px solid ${p.status === 'completed' ? '#81c784' : p.status === 'failed' ? '#ef5350' : '#ffd700'}` }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                            <span style={{ fontWeight: 'bold', color: 'var(--color-gold)' }}>{p.type === 'hifz' ? 'Hifz' : "Muraja'ah"} - Week {p.week} ({p.month} {p.year})</span>
+                                            <span style={{ fontSize: '0.8rem', padding: '2px 8px', borderRadius: '12px', background: p.status === 'completed' ? 'rgba(76, 175, 80, 0.2)' : p.status === 'failed' ? 'rgba(239, 83, 80, 0.2)' : 'rgba(255, 215, 0, 0.2)', color: p.status === 'completed' ? '#81c784' : p.status === 'failed' ? '#ef5350' : '#ffd700' }}>
+                                                {p.status === 'completed' ? 'Voldaan' : p.status === 'failed' ? 'Niet voldaan' : 'In afwachting'}
+                                            </span>
+                                        </div>
+                                        <div style={{ marginBottom: '4px' }}><strong>Doel:</strong> {p.goal || '-'}</div>
+                                        {p.note && <div style={{ fontSize: '0.9rem', fontStyle: 'italic', color: 'var(--color-text-muted)' }}><strong>Opmerking:</strong> {p.note}</div>}
+                                    </div>
+                                )) : (
+                                    <div style={{ color: 'var(--color-text-muted)', fontStyle: 'italic', padding: '20px', textAlign: 'center' }}>Nog geen Koran voortgang geregistreerd.</div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </main >
