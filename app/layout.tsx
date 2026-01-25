@@ -5,7 +5,7 @@ import "./globals.css";
 const outfit = Outfit({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-body",
+  variable: "--font-outfit",
 });
 
 export const metadata: Metadata = {
