@@ -65,13 +65,13 @@ export default function GroupsPage() {
     return (
         <main style={{ padding: '40px' }}>
             <div className="container">
-                <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="mobile-column">
                     <div>
                         <h1 className="heading-lg">Klassen & Groepen</h1>
                         <p style={{ color: 'var(--color-text-muted)' }}>Overzicht van alle lesgroepen. (v1.1 FIX LOADED)</p>
                         <p style={{ color: 'orange', fontSize: '0.8rem' }}>Debug: {groups.length} groepen gevonden.</p>
                     </div>
-                    <Link href="/groups/new" className="btn btn-primary">
+                    <Link href="/groups/new" className="btn btn-primary mobile-full-width">
                         + &nbsp; Nieuwe Groep
                     </Link>
                 </header>
@@ -84,7 +84,7 @@ export default function GroupsPage() {
                         <Link href="/groups/new" style={{ color: 'var(--color-gold)', marginTop: '10px', display: 'inline-block' }}>Eerste groep aanmaken →</Link>
                     </div>
                 ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '24px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
                         {groups.map(group => (
                             <Link href={`/groups/${group.id}`} key={group.id} style={{ display: 'block' }}>
                                 <div className="card" style={{

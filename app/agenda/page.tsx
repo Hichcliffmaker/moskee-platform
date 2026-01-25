@@ -125,13 +125,13 @@ export default function AgendaPage() {
             )}
 
             <div className="container">
-                <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="mobile-column">
                     <div>
                         <h1 className="heading-lg">School Agenda</h1>
                         <p style={{ color: 'var(--color-text-muted)' }}>Overzicht van lessen, vakanties en activiteiten.</p>
                     </div>
                     {isAdmin && (
-                        <button onClick={handleAddItem} className="btn btn-primary">
+                        <button onClick={handleAddItem} className="btn btn-primary mobile-full-width">
                             + &nbsp; Item Toevoegen
                         </button>
                     )}
@@ -146,7 +146,7 @@ export default function AgendaPage() {
                             <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Geen agenda items gevonden.</div>
                         ) : (
                             agendaItems.map((item, index) => (
-                                <div key={item.id} style={{
+                                <div key={item.id} className="mobile-column" style={{
                                     display: 'flex',
                                     padding: '24px',
                                     borderBottom: index !== agendaItems.length - 1 ? '1px solid var(--color-border)' : 'none',
@@ -161,11 +161,11 @@ export default function AgendaPage() {
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         minWidth: '80px',
-                                        height: '80px',
+                                        minHeight: '80px',
                                         background: 'rgba(255,255,255,0.05)',
                                         borderRadius: 'var(--radius-sm)',
                                         border: item.type === 'holiday' ? '1px solid #e57373' : '1px solid var(--color-border)'
-                                    }}>
+                                    }} className="mobile-full-width">
                                         <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
                                             {new Date(item.date).getDate()}
                                         </div>

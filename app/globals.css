@@ -22,7 +22,6 @@
   --color-bg-card: #1e293b;
   --color-bg-card-hover: #334155;
   --color-gold: #38bdf8;
-  /* Sky Blue acting as accent */
   --color-gold-hover: #0ea5e9;
   --color-gold-dim: #0284c7;
   --color-text-main: #f8fafc;
@@ -33,15 +32,12 @@
 
 [data-theme='desert'] {
   --color-bg-main: #fbf6f1;
-  /* Warm Off-white */
   --color-bg-card: #ffffff;
   --color-bg-card-hover: #f3f4f6;
   --color-gold: #b45309;
-  /* Bronze/Amber */
   --color-gold-hover: #d97706;
   --color-gold-dim: #92400e;
   --color-text-main: #422006;
-  /* Dark Brown */
   --color-text-muted: #78350f;
   --color-border: #e7e5e4;
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -72,6 +68,12 @@ a {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
+  }
 }
 
 .btn {
@@ -114,6 +116,12 @@ a {
   box-shadow: var(--shadow-sm);
 }
 
+@media (max-width: 768px) {
+  .card {
+    padding: 16px;
+  }
+}
+
 .heading-lg {
   font-size: 2.5rem;
   font-weight: 700;
@@ -121,8 +129,44 @@ a {
   margin-bottom: 1rem;
 }
 
+@media (max-width: 768px) {
+  .heading-lg {
+    font-size: 1.8rem;
+  }
+}
+
 .heading-md {
   font-size: 1.5rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .heading-md {
+    font-size: 1.3rem;
+  }
+}
+
+/* --- Mobile Specific Utilities --- */
+.mobile-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (min-width: 769px) {
+  .mobile-column {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.mobile-full-width {
+  width: 100%;
+}
+
+@media (min-width: 769px) {
+  .mobile-full-width {
+    width: auto;
+  }
 }

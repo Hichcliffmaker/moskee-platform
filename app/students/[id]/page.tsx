@@ -399,7 +399,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                             <h2 className="heading-md">Student Bewerken</h2>
 
                             <h3 className="heading-sm" style={{ color: 'var(--color-text-muted)' }}>Persoonsgegevens</h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
                                 <div>
                                     <label style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Voornaam</label>
                                     <input type="text" value={formData.firstName} onChange={e => setFormData({ ...formData, firstName: e.target.value })} style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid #333', color: 'white', borderRadius: '4px' }} />
@@ -424,7 +424,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                             </div>
 
                             <h3 className="heading-sm" style={{ color: 'var(--color-text-muted)', marginTop: '10px' }}>Contactgegevens</h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
                                 <div>
                                     <label style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Naam Ouder/Voogd</label>
                                     <input type="text" value={formData.parentName} onChange={e => setFormData({ ...formData, parentName: e.target.value })} style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid #333', color: 'white', borderRadius: '4px' }} />
@@ -449,29 +449,29 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                             </div>
                         </div>
                     ) : (
-                        <div style={{ display: 'flex', gap: '30px', alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>
+                        <div style={{ display: 'flex', gap: '30px', alignItems: 'flex-start', position: 'relative', zIndex: 1 }} className="mobile-column">
                             <div style={{
                                 width: '120px', height: '120px', borderRadius: '50%', backgroundColor: 'var(--color-bg-main)',
                                 border: '3px solid var(--color-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 fontSize: '3rem', color: 'var(--color-gold)', flexShrink: 0
-                            }}>
+                            }} className="mobile-hide">
                                 {student.firstName[0]}{student.lastName[0]}
                             </div>
 
-                            <div style={{ flex: 1, paddingTop: '10px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div style={{ flex: 1, paddingTop: '10px' }} className="mobile-full-width">
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }} className="mobile-column">
                                     <div>
                                         <h1 className="heading-lg" style={{ marginBottom: '8px' }}>{student.firstName} {student.lastName}</h1>
                                         <p style={{ fontSize: '1.2rem', color: 'var(--color-text-muted)' }}>{student.group} • {student.id}</p>
                                     </div>
-                                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+                                    <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }} className="mobile-column">
                                         <div style={{ marginBottom: '8px' }}>
                                             <span style={{ padding: '6px 16px', background: 'rgba(76, 175, 80, 0.2)', color: '#81c784', border: '1px solid rgba(76, 175, 80, 0.3)', borderRadius: '20px', fontWeight: 'bold' }}>
                                                 {student.status === 'active' ? 'Actief' : 'Inactief'}
                                             </span>
                                         </div>
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            <button onClick={() => setIsEditing(true)} className="btn btn-ghost" style={{ border: '1px solid var(--color-border)', fontSize: '0.8rem' }}>✏️ Bewerk</button>
+                                        <div style={{ display: 'flex', gap: '8px' }} className="mobile-full-width">
+                                            <button onClick={() => setIsEditing(true)} className="btn btn-ghost" style={{ border: '1px solid var(--color-border)', fontSize: '0.8rem', flex: 1 }}>✏️ Bewerk</button>
                                             {isAdmin && (
                                                 <button onClick={handleDelete} className="btn btn-ghost" style={{ border: '1px solid rgba(244, 67, 54, 0.3)', color: '#e57373', fontSize: '0.8rem' }}>🗑️</button>
                                             )}
@@ -479,7 +479,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                                     </div>
                                 </div>
 
-                                <div style={{ marginTop: '24px', display: 'flex', gap: '40px', borderTop: '1px solid var(--color-border)', paddingTop: '20px' }}>
+                                <div style={{ marginTop: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '20px', borderTop: '1px solid var(--color-border)', paddingTop: '20px' }}>
                                     <div>
                                         <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>OUDER / VOOGD</div>
                                         <div style={{ fontWeight: '600' }}>{student.parentName}</div>
@@ -496,7 +496,7 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
 
                                 {/* Extra Contact Info Row */}
                                 {(student.email || student.address) && (
-                                    <div style={{ marginTop: '16px', display: 'flex', gap: '40px' }}>
+                                    <div style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '20px' }}>
                                         {student.email && (
                                             <div>
                                                 <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>EMAILADRES</div>
@@ -517,25 +517,25 @@ export default function StudentProfilePage({ params }: { params: Promise<{ id: s
                 </div>
 
                 {/* Tabs / Sub-navigation */}
-                <div style={{ marginBottom: '30px', borderBottom: '1px solid var(--color-border)', display: isEditing ? 'none' : 'flex', gap: '30px' }}>
-                    <button onClick={() => setActiveTab('overview')} style={{ background: 'none', border: 'none', borderBottom: activeTab === 'overview' ? '3px solid var(--color-gold)' : '3px solid transparent', padding: '10px 0', color: activeTab === 'overview' ? 'var(--color-gold)' : 'var(--color-text-muted)', fontWeight: 'bold', cursor: 'pointer' }}>
+                <div style={{ marginBottom: '30px', borderBottom: '1px solid var(--color-border)', display: isEditing ? 'none' : 'flex', gap: '20px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                    <button onClick={() => setActiveTab('overview')} style={{ flexShrink: 0, background: 'none', border: 'none', borderBottom: activeTab === 'overview' ? '3px solid var(--color-gold)' : '3px solid transparent', padding: '10px 0', color: activeTab === 'overview' ? 'var(--color-gold)' : 'var(--color-text-muted)', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                         Overzicht
                     </button>
-                    <button onClick={() => setActiveTab('grades')} style={{ background: 'none', border: 'none', borderBottom: activeTab === 'grades' ? '3px solid var(--color-gold)' : '3px solid transparent', padding: '10px 0', color: activeTab === 'grades' ? 'var(--color-gold)' : 'var(--color-text-muted)', fontWeight: 'bold', cursor: 'pointer' }}>
+                    <button onClick={() => setActiveTab('grades')} style={{ flexShrink: 0, background: 'none', border: 'none', borderBottom: activeTab === 'grades' ? '3px solid var(--color-gold)' : '3px solid transparent', padding: '10px 0', color: activeTab === 'grades' ? 'var(--color-gold)' : 'var(--color-text-muted)', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                         Cijferlijst
                     </button>
-                    <button onClick={() => setActiveTab('absences')} style={{ background: 'none', border: 'none', borderBottom: activeTab === 'absences' ? '3px solid var(--color-gold)' : '3px solid transparent', padding: '10px 0', color: activeTab === 'absences' ? 'var(--color-gold)' : 'var(--color-text-muted)', fontWeight: 'bold', cursor: 'pointer' }}>
+                    <button onClick={() => setActiveTab('absences')} style={{ flexShrink: 0, background: 'none', border: 'none', borderBottom: activeTab === 'absences' ? '3px solid var(--color-gold)' : '3px solid transparent', padding: '10px 0', color: activeTab === 'absences' ? 'var(--color-gold)' : 'var(--color-text-muted)', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                         Absenties
                     </button>
-                    <button onClick={() => setActiveTab('notes')} style={{ background: 'none', border: 'none', borderBottom: activeTab === 'notes' ? '3px solid var(--color-gold)' : '3px solid transparent', padding: '10px 0', color: activeTab === 'notes' ? 'var(--color-gold)' : 'var(--color-text-muted)', fontWeight: 'bold', cursor: 'pointer' }}>
+                    <button onClick={() => setActiveTab('notes')} style={{ flexShrink: 0, background: 'none', border: 'none', borderBottom: activeTab === 'notes' ? '3px solid var(--color-gold)' : '3px solid transparent', padding: '10px 0', color: activeTab === 'notes' ? 'var(--color-gold)' : 'var(--color-text-muted)', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                         Notities
                     </button>
-                    <button onClick={() => setActiveTab('quran')} style={{ background: 'none', border: 'none', borderBottom: activeTab === 'quran' ? '3px solid var(--color-gold)' : '3px solid transparent', padding: '10px 0', color: activeTab === 'quran' ? 'var(--color-gold)' : 'var(--color-text-muted)', fontWeight: 'bold', cursor: 'pointer' }}>
+                    <button onClick={() => setActiveTab('quran')} style={{ flexShrink: 0, background: 'none', border: 'none', borderBottom: activeTab === 'quran' ? '3px solid var(--color-gold)' : '3px solid transparent', padding: '10px 0', color: activeTab === 'quran' ? 'var(--color-gold)' : 'var(--color-text-muted)', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                         Koran
                     </button>
                 </div>
 
-                <div style={{ display: isEditing ? 'none' : 'grid', gridTemplateColumns: activeTab === 'overview' ? '2fr 1fr' : '1fr', gap: '24px' }}>
+                <div style={{ display: isEditing ? 'none' : 'grid', gridTemplateColumns: activeTab === 'overview' ? 'repeat(auto-fit, minmax(300px, 1fr))' : '1fr', gap: '24px' }}>
 
                     {/* OVERVIEW CONTENT */}
                     {activeTab === 'overview' && (
