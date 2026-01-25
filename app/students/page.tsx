@@ -29,11 +29,20 @@ export default function StudentsPage() {
             let query = supabase.from('students').select('*');
 
             if (user && user.role === 'Docent') {
-                // First get the groups for this teacher (by ID or name)
-                const { data: myGroups } = await supabase
-                    .from('groups')
-                    .select('name')
-                    .or(`teacher_id.eq.${user.id},teacher.eq.${user.username}`);
+                // First get the IDs of groups linked via the join table
+                const { data: links } = await supabase.from('group_teachers').select('group_id').eq('teacher_id', user.id);
+                const ids = links?.map(l => l.group_id) || [];
+
+                // Now get the names of these groups (or groups where they are the legacy teacher)
+                let groupQuery = supabase.from('groups').select('name');
+
+                if (ids.length > 0) {
+                    groupQuery = groupQuery.or(`id.in.(${ids.map(id => `"${id}"`).join(',')}),teacher.eq.${user.username}`);
+                } else {
+                    groupQuery = groupQuery.eq('teacher', user.username);
+                }
+
+                const { data: myGroups } = await groupQuery;
 
                 const groupNames = myGroups?.map(g => g.name) || [];
 

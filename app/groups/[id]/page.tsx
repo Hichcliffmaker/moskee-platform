@@ -18,7 +18,15 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
     // Edit/Delete State
     const [isEditing, setIsEditing] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
-    const [formData, setFormData] = useState({ name: '', type: '', teacher: '', teacher_id: '', room: '', schedule: '', description: '' });
+    const [formData, setFormData] = useState({
+        name: '',
+        type: '',
+        teacher: '',
+        teacher_ids: [] as string[],
+        room: '',
+        schedule: '',
+        description: ''
+    });
     const [staffUsers, setStaffUsers] = useState<any[]>([]);
 
     const router = require('next/navigation').useRouter(); // using require to avoid top-level import conflict if any
@@ -59,8 +67,16 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
             if (usersData) setStaffUsers(usersData);
 
             if (groupData) {
+                // 3. Fetch linked teachers
+                const { data: teacherLinks } = await supabase
+                    .from('group_teachers')
+                    .select('teacher_id')
+                    .eq('group_id', id);
+
+                const linkedIds = teacherLinks?.map(l => l.teacher_id) || [];
+
                 // Permission Check for Docents
-                if (user.role === 'Docent' && groupData.teacher_id !== user.id) {
+                if (user.role === 'Docent' && !linkedIds.includes(user.id)) {
                     alert('Geen toegang tot deze groep.');
                     window.location.href = '/groups';
                     return;
@@ -71,7 +87,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                     name: groupData.name || '',
                     type: groupData.type || 'Overig',
                     teacher: groupData.teacher || '',
-                    teacher_id: groupData.teacher_id || '',
+                    teacher_ids: linkedIds,
                     room: groupData.room || '',
                     schedule: groupData.schedule || '',
                     description: groupData.description || ''
@@ -107,7 +123,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                 name: group.name || '',
                 type: group.type || 'Overig',
                 teacher: group.teacher || '',
-                teacher_id: group.teacher_id || '',
+                teacher_ids: formData.teacher_ids, // preserve what we fetched in fetchData
                 room: group.room || '',
                 schedule: group.schedule || '',
                 description: group.description || ''
@@ -116,13 +132,12 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
     }, [group]);
 
     const handleSave = async () => {
+        // 1. Update Group Details
         const { error } = await supabase
             .from('groups')
             .update({
                 name: formData.name,
                 type: formData.type,
-                teacher: formData.teacher,
-                teacher_id: formData.teacher_id,
                 room: formData.room,
                 schedule: formData.schedule,
                 description: formData.description
@@ -131,10 +146,22 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
 
         if (error) {
             alert('Fout bij opslaan: ' + error.message);
-        } else {
-            setGroup({ ...group!, ...formData });
-            setIsEditing(false);
+            return;
         }
+
+        // 2. Sync Teachers in join table
+        // This is a simplified "Re-sync" strategy: delete all and re-insert
+        await supabase.from('group_teachers').delete().eq('group_id', id);
+        if (formData.teacher_ids.length > 0) {
+            const links = formData.teacher_ids.map(tid => ({
+                group_id: id,
+                teacher_id: tid
+            }));
+            await supabase.from('group_teachers').insert(links);
+        }
+
+        setGroup({ ...group!, ...formData });
+        setIsEditing(false);
     };
 
     const handleDelete = async () => {
@@ -185,24 +212,27 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '8px', color: 'var(--color-text-muted)' }}>Docent</label>
-                                    <select
-                                        value={formData.teacher_id}
-                                        onChange={e => {
-                                            const selectedUser = staffUsers.find(u => u.id === e.target.value);
-                                            setFormData({
-                                                ...formData,
-                                                teacher_id: e.target.value,
-                                                teacher: selectedUser ? selectedUser.username : ''
-                                            });
-                                        }}
-                                        style={{ width: '100%', padding: '10px', background: '#0a1f18', border: '1px solid #333', color: 'white', borderRadius: '4px' }}
-                                    >
-                                        <option value="">Selecteer Docent</option>
+                                    <label style={{ display: 'block', marginBottom: '8px', color: 'var(--color-text-muted)' }}>Docenten</label>
+                                    <div style={{
+                                        padding: '12px', background: '#0a1f18', border: '1px solid #333', borderRadius: '4px',
+                                        maxHeight: '150px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px'
+                                    }}>
                                         {staffUsers.map(user => (
-                                            <option key={user.id} value={user.id}>{user.username} ({user.role})</option>
+                                            <label key={user.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.9rem' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={formData.teacher_ids.includes(user.id)}
+                                                    onChange={e => {
+                                                        const newIds = e.target.checked
+                                                            ? [...formData.teacher_ids, user.id]
+                                                            : formData.teacher_ids.filter(id => id !== user.id);
+                                                        setFormData({ ...formData, teacher_ids: newIds });
+                                                    }}
+                                                />
+                                                <span>{user.username} ({user.role})</span>
+                                            </label>
                                         ))}
-                                    </select>
+                                    </div>
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '8px', color: 'var(--color-text-muted)' }}>Lokaal</label>
@@ -243,8 +273,10 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                                 </div>
                                 <div style={{ fontSize: '1.2rem', color: 'var(--color-text-muted)', display: 'flex', gap: '24px' }}>
                                     <span>📍 {group.room || 'Geen lokaal'}</span>
-                                    <span>🎓 {group.teacher || 'Geen docent'}</span>
                                     <span>🕒 {group.schedule || '-'}</span>
+                                </div>
+                                <div style={{ marginTop: '10px', fontSize: '0.9rem', color: 'var(--color-gold)' }}>
+                                    🎓 {group.teacher || 'Docenten: '} {staffUsers.filter(u => formData.teacher_ids.includes(u.id)).map(u => u.username).join(', ')}
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '10px' }}>

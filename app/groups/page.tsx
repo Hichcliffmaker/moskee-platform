@@ -31,7 +31,15 @@ export default function GroupsPage() {
 
             // If Docent, only show their groups
             if (user && user.role === 'Docent') {
-                query = query.or(`teacher_id.eq.${user.id},teacher.eq.${user.username}`);
+                const { data: links } = await supabase.from('group_teachers').select('group_id').eq('teacher_id', user.id);
+                const ids = links?.map(l => l.group_id) || [];
+
+                if (ids.length > 0) {
+                    // Filter by join table IDs OR legacy teacher name
+                    query = query.or(`id.in.(${ids.map(id => `"${id}"`).join(',')}),teacher.eq.${user.username}`);
+                } else {
+                    query = query.eq('teacher', user.username);
+                }
             }
 
             const { data, error } = await query.order('name');
