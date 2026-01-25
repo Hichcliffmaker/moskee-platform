@@ -31,8 +31,7 @@ export default function GroupsPage() {
 
             // If Docent, only show their groups
             if (user && user.role === 'Docent') {
-                query = query.eq('teacher', user.username);
-                // Note: This assumes username in dashboard_users matches teacher name in groups.
+                query = query.or(`teacher_id.eq.${user.id},teacher.eq.${user.username}`);
             }
 
             const { data, error } = await query.order('name');

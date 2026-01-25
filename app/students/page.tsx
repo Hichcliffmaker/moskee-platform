@@ -29,11 +29,11 @@ export default function StudentsPage() {
             let query = supabase.from('students').select('*');
 
             if (user && user.role === 'Docent') {
-                // First get the groups for this teacher
+                // First get the groups for this teacher (by ID or name)
                 const { data: myGroups } = await supabase
                     .from('groups')
                     .select('name')
-                    .eq('teacher', user.username);
+                    .or(`teacher_id.eq.${user.id},teacher.eq.${user.username}`);
 
                 const groupNames = myGroups?.map(g => g.name) || [];
 

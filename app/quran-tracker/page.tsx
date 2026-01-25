@@ -21,7 +21,7 @@ export default function QuranTrackerPage() {
             let query = supabase.from('groups').select('*');
 
             if (user.role === 'Docent') {
-                query = query.eq('teacher', user.username);
+                query = query.or(`teacher_id.eq.${user.id},teacher.eq.${user.username}`);
             }
 
             const { data, error } = await query.order('name');
