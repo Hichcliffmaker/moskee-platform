@@ -18,7 +18,16 @@ ALTER TABLE group_teachers ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow public read teachers" ON group_teachers FOR SELECT TO anon, authenticated USING (true);
 CREATE POLICY "Allow public all teachers" ON group_teachers FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
--- Migrate existing teacher_id (if any)
-INSERT INTO group_teachers (group_id, teacher_id)
-SELECT id, teacher_id FROM groups WHERE teacher_id IS NOT NULL
-ON CONFLICT DO NOTHING;
+-- SAFE MIGRATION: Only try to migrate if the column actually exists in groups
+DO $$ 
+BEGIN 
+    IF EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name='groups' AND column_name='teacher_id'
+    ) THEN
+        INSERT INTO group_teachers (group_id, teacher_id)
+        SELECT id, teacher_id FROM groups WHERE teacher_id IS NOT NULL
+        ON CONFLICT DO NOTHING;
+    END IF;
+END $$;
